@@ -1,3 +1,5 @@
+**English** · [Português](README.pt-BR.md)
+
 # SSI for Academic Diplomas — issuer · verifier · wallet
 
 A **Self-Sovereign Identity (SSI)** system that issues academic diplomas as

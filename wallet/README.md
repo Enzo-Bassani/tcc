@@ -1,3 +1,5 @@
+**English** · [Português](README.pt-BR.md)
+
 # TCC Wallet — the holder
 
 The **mobile holder** of the [SSI diploma system](../README.md): a Kotlin/Android app

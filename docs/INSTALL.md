@@ -1,3 +1,5 @@
+**English** · [Português](INSTALL.pt-BR.md)
+
 # Installing the toolchain
 
 How to set up a local environment to build, test, and run this system. Commands are
