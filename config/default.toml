@@ -1,0 +1,7 @@
+# Default configuration. Override any value with env vars prefixed `ISSUER__`,
+# e.g. ISSUER__DATABASE_URL=postgres://...
+bind_addr = "127.0.0.1:8080"
+issuer_url = "http://localhost:8080"
+database_url = "postgres://issuer:issuer@localhost:5432/issuer_backend"
+admin_user = "admin"
+admin_password = "admin"

@@ -1,0 +1,25 @@
+[package]
+name = "relay"
+version = "0.1.0"
+edition = "2024"
+description = "A dumb OID4VP transport relay: stores and forwards opaque request/response messages keyed by session id. Performs no validation."
+
+[[bin]]
+name = "relay"
+path = "src/main.rs"
+
+[dependencies]
+axum = { version = "0.8", features = ["macros"] }
+tokio = { version = "1", features = ["full"] }
+tower-http = { version = "0.6", features = ["trace", "cors", "fs"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { version = "1", features = ["v4"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+ssi-core = { path = "../ssi-core", features = ["native", "wallet-sim"] }
+issuer_backend = { path = "../.." }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "blocking"] }
+serde_json = { workspace = true }

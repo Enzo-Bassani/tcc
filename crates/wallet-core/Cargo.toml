@@ -1,0 +1,16 @@
+[package]
+name = "wallet-core"
+version = "0.1.0"
+edition = "2024"
+description = "Wallet conformance oracle: mint a credential bound to the wallet's key and validate the wallet's VP Token with the same engine the verifier uses."
+
+# The `mint`/`verify` CLI the Kotlin conformance test drives over ProcessBuilder.
+[[bin]]
+name = "wallet-conformance"
+path = "src/main.rs"
+
+[dependencies]
+ssi-core = { path = "../ssi-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }

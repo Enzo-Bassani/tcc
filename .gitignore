@@ -1,0 +1,4 @@
+/target
+/keys
+.env
+/.dev-logs

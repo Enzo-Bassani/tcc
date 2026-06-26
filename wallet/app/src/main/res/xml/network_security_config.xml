@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Dev/TCC only: permit cleartext HTTP to any host, so the wallet reaches the local
+  issuer/relay (which run over http) regardless of address — emulator (10.0.2.2),
+  localhost, or any LAN IP — with no per-host edits. Mirrors the issuer's own
+  http-over-localhost concession (decision W8). Production would use HTTPS only and
+  delete this file.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

@@ -1,0 +1,570 @@
+{
+  "claims": [
+    {
+      "display": [
+        {
+          "label": "Student",
+          "locale": "en-US"
+        },
+        {
+          "label": "Estudante",
+          "locale": "pt-BR"
+        }
+      ],
+      "path": [
+        "student"
+      ],
+      "sd": "never"
+    },
+    {
+      "display": [
+        {
+          "label": "Full name",
+          "locale": "en-US"
+        },
+        {
+          "label": "Nome completo",
+          "locale": "pt-BR"
+        }
+      ],
+      "mandatory": true,
+      "path": [
+        "student",
+        "full_name"
+      ],
+      "sd": "always"
+    },
+    {
+      "display": [
+        {
+          "label": "Student ID",
+          "locale": "en-US"
+        },
+        {
+          "label": "Matrícula",
+          "locale": "pt-BR"
+        }
+      ],
+      "mandatory": true,
+      "path": [
+        "student",
+        "student_id"
+      ],
+      "sd": "always"
+    },
+    {
+      "display": [
+        {
+          "label": "Date of birth",
+          "locale": "en-US"
+        },
+        {
+          "label": "Data de nascimento",
+          "locale": "pt-BR"
+        }
+      ],
+      "mandatory": true,
+      "path": [
+        "student",
+        "date_of_birth"
+      ],
+      "sd": "always"
+    },
+    {
+      "display": [
+        {
+          "label": "National ID (CPF)",
+          "locale": "en-US"
+        },
+        {
+          "label": "CPF",
+          "locale": "pt-BR"
+        }
+      ],
+      "mandatory": true,
+      "path": [
+        "student",
+        "national_id"
+      ],
+      "sd": "always"
+    },
+    {
+      "display": [
+        {
+          "label": "Nationality",
+          "locale": "en-US"
+        },
+        {
+          "label": "Nacionalidade",
+          "locale": "pt-BR"
+        }
+      ],
+      "path": [
+        "student",
+        "nationality"
+      ],
+      "sd": "always"
+    },
+    {
+      "display": [
+        {
+          "label": "Place of birth",
+          "locale": "en-US"
+        },
+        {
+          "label": "Naturalidade",
+          "locale": "pt-BR"
+        }
+      ],
+      "path": [
+        "student",
+        "birthplace"
+      ],
+      "sd": "always"
+    },
+    {
+      "display": [
+        {
+          "label": "Institution",
+          "locale": "en-US"
+        },
+        {
+          "label": "Instituição",
+          "locale": "pt-BR"
+        }
+      ],
+      "path": [
+        "institution"
+      ],
+      "sd": "never"
+    },
+    {
+      "display": [
+        {
+          "label": "Institution name",
+          "locale": "en-US"
+        },
+        {
+          "label": "Nome da instituição",
+          "locale": "pt-BR"
+        }
+      ],
+      "mandatory": true,
+      "path": [
+        "institution",
+        "name"
+      ],
+      "sd": "never"
+    },
+    {
+      "display": [
+        {
+          "label": "Acronym",
+          "locale": "en-US"
+        },
+        {
+          "label": "Sigla",
+          "locale": "pt-BR"
+        }
+      ],
+      "path": [
+        "institution",
+        "acronym"
+      ],
+      "sd": "never"
+    },
+    {
+      "display": [
+        {
+          "label": "Institution type",
+          "locale": "en-US"
+        },
+        {
+          "label": "Tipo de instituição",
+          "locale": "pt-BR"
+        }
+      ],
+      "path": [
+        "institution",
+        "type"
+      ],
+      "sd": "never"
+    },
+    {
+      "display": [
+        {
+          "label": "e-MEC code",
+          "locale": "en-US"
+        },
+        {
+          "label": "Código e-MEC",
+          "locale": "pt-BR"
+        }
+      ],
+      "mandatory": true,
+      "path": [
+        "institution",
+        "emec_code"
+      ],
+      "sd": "never"
+    },
+    {
+      "display": [
+        {
+          "label": "City",
+          "locale": "en-US"
+        },
+        {
+          "label": "Município",
+          "locale": "pt-BR"
+        }
+      ],
+      "path": [
+        "institution",
+        "city"
+      ],
+      "sd": "never"
+    },
+    {
+      "display": [
+        {
+          "label": "State",
+          "locale": "en-US"
+        },
+        {
+          "label": "UF",
+          "locale": "pt-BR"
+        }
+      ],
+      "path": [
+        "institution",
+        "state"
+      ],
+      "sd": "never"
+    },
+    {
+      "display": [
+        {
+          "label": "Country",
+          "locale": "en-US"
+        },
+        {
+          "label": "País",
+          "locale": "pt-BR"
+        }
+      ],
+      "path": [
+        "institution",
+        "country"
+      ],
+      "sd": "never"
+    },
+    {
+      "display": [
+        {
+          "label": "Accreditation act",
+          "locale": "en-US"
+        },
+        {
+          "label": "Ato de credenciamento",
+          "locale": "pt-BR"
+        }
+      ],
+      "path": [
+        "institution",
+        "accreditation_act"
+      ],
+      "sd": "never"
+    },
+    {
+      "display": [
+        {
+          "label": "Degree",
+          "locale": "en-US"
+        },
+        {
+          "label": "Grau",
+          "locale": "pt-BR"
+        }
+      ],
+      "path": [
+        "degree"
+      ],
+      "sd": "never"
+    },
+    {
+      "display": [
+        {
+          "label": "Degree title",
+          "locale": "en-US"
+        },
+        {
+          "label": "Título conferido",
+          "locale": "pt-BR"
+        }
+      ],
+      "mandatory": true,
+      "path": [
+        "degree",
+        "title"
+      ],
+      "sd": "always"
+    },
+    {
+      "display": [
+        {
+          "label": "Field of study",
+          "locale": "en-US"
+        },
+        {
+          "label": "Área de formação",
+          "locale": "pt-BR"
+        }
+      ],
+      "mandatory": true,
+      "path": [
+        "degree",
+        "field_of_study"
+      ],
+      "sd": "always"
+    },
+    {
+      "display": [
+        {
+          "label": "Degree level",
+          "locale": "en-US"
+        },
+        {
+          "label": "Nível",
+          "locale": "pt-BR"
+        }
+      ],
+      "mandatory": true,
+      "path": [
+        "degree",
+        "level"
+      ],
+      "sd": "always"
+    },
+    {
+      "display": [
+        {
+          "label": "Modality",
+          "locale": "en-US"
+        },
+        {
+          "label": "Modalidade",
+          "locale": "pt-BR"
+        }
+      ],
+      "path": [
+        "degree",
+        "modality"
+      ],
+      "sd": "always"
+    },
+    {
+      "display": [
+        {
+          "label": "Workload (hours)",
+          "locale": "en-US"
+        },
+        {
+          "label": "Carga horária (horas)",
+          "locale": "pt-BR"
+        }
+      ],
+      "path": [
+        "degree",
+        "workload_hours"
+      ],
+      "sd": "always"
+    },
+    {
+      "display": [
+        {
+          "label": "Course conclusion date",
+          "locale": "en-US"
+        },
+        {
+          "label": "Data de conclusão do curso",
+          "locale": "pt-BR"
+        }
+      ],
+      "mandatory": true,
+      "path": [
+        "conclusion_date"
+      ],
+      "sd": "always"
+    },
+    {
+      "display": [
+        {
+          "label": "Graduation date",
+          "locale": "en-US"
+        },
+        {
+          "label": "Data de colação de grau",
+          "locale": "pt-BR"
+        }
+      ],
+      "path": [
+        "graduation_date"
+      ],
+      "sd": "always"
+    },
+    {
+      "display": [
+        {
+          "label": "Grade point average",
+          "locale": "en-US"
+        },
+        {
+          "label": "Índice de aproveitamento",
+          "locale": "pt-BR"
+        }
+      ],
+      "path": [
+        "gpa"
+      ],
+      "sd": "always"
+    },
+    {
+      "display": [
+        {
+          "label": "Diploma registry",
+          "locale": "en-US"
+        },
+        {
+          "label": "Registro do diploma",
+          "locale": "pt-BR"
+        }
+      ],
+      "path": [
+        "registry"
+      ],
+      "sd": "never"
+    },
+    {
+      "display": [
+        {
+          "label": "Registry number",
+          "locale": "en-US"
+        },
+        {
+          "label": "Número de registro",
+          "locale": "pt-BR"
+        }
+      ],
+      "mandatory": true,
+      "path": [
+        "registry",
+        "number"
+      ],
+      "sd": "always"
+    },
+    {
+      "display": [
+        {
+          "label": "Registry book",
+          "locale": "en-US"
+        },
+        {
+          "label": "Livro",
+          "locale": "pt-BR"
+        }
+      ],
+      "path": [
+        "registry",
+        "book"
+      ],
+      "sd": "always"
+    },
+    {
+      "display": [
+        {
+          "label": "Registry page",
+          "locale": "en-US"
+        },
+        {
+          "label": "Folha",
+          "locale": "pt-BR"
+        }
+      ],
+      "path": [
+        "registry",
+        "page"
+      ],
+      "sd": "always"
+    },
+    {
+      "display": [
+        {
+          "label": "Registration date",
+          "locale": "en-US"
+        },
+        {
+          "label": "Data de registro",
+          "locale": "pt-BR"
+        }
+      ],
+      "path": [
+        "registry",
+        "registration_date"
+      ],
+      "sd": "always"
+    },
+    {
+      "display": [
+        {
+          "label": "Registrar",
+          "locale": "en-US"
+        },
+        {
+          "label": "Órgão registrador",
+          "locale": "pt-BR"
+        }
+      ],
+      "path": [
+        "registry",
+        "registrar"
+      ],
+      "sd": "always"
+    }
+  ],
+  "description": "Academic diploma issued by a higher-education institution as a course-conclusion credential, following the Brazilian MEC model.",
+  "display": [
+    {
+      "description": "Higher-education diploma certifying a conferred degree.",
+      "locale": "en-US",
+      "name": "University Diploma",
+      "rendering": {
+        "simple": {
+          "background_color": "#0b2a4a",
+          "logo": {
+            "alt_text": "Coat of arms of the issuing university",
+            "uri": "https://ufsc.br/assets/brasao-ufsc.png"
+          },
+          "text_color": "#ffffff"
+        }
+      }
+    },
+    {
+      "description": "Diploma de ensino superior que certifica o grau conferido.",
+      "locale": "pt-BR",
+      "name": "Diploma de Graduação",
+      "rendering": {
+        "simple": {
+          "background_color": "#0b2a4a",
+          "logo": {
+            "alt_text": "Brasão da universidade emissora",
+            "uri": "https://ufsc.br/assets/brasao-ufsc.png"
+          },
+          "text_color": "#ffffff"
+        }
+      }
+    }
+  ],
+  "name": "University Diploma",
+  "vct": "urn:tcc:mec:UniversityDiploma:1"
+}

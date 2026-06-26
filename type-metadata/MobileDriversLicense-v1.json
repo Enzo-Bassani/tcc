@@ -1,0 +1,180 @@
+{
+  "vct": "urn:tcc:example:MobileDriversLicense:1",
+  "name": "Mobile Driver's License",
+  "description": "Design-only SD-JWT VC Type Metadata example modelled on the ISO/IEC 18013-5 (mDL) data set. This credential type is NOT issued, held, or verified by this system; it exists solely as a reference artifact for prototyping wallet and verifier UI designs against a non-diploma credential.",
+  "display": [
+    {
+      "locale": "en-US",
+      "name": "Driver's License",
+      "description": "A mobile driver's license certifying the holder's driving privileges.",
+      "rendering": {
+        "simple": {
+          "logo": {
+            "uri": "https://example.gov/assets/dmv-logo.png",
+            "alt_text": "Issuing motor-vehicle authority logo"
+          },
+          "background_color": "#14532d",
+          "text_color": "#ffffff"
+        }
+      }
+    }
+  ],
+  "claims": [
+    {
+      "path": ["family_name"],
+      "display": [{ "locale": "en-US", "label": "Family name" }],
+      "sd": "always",
+      "mandatory": true
+    },
+    {
+      "path": ["given_name"],
+      "display": [{ "locale": "en-US", "label": "Given name" }],
+      "sd": "always",
+      "mandatory": true
+    },
+    {
+      "path": ["birth_date"],
+      "display": [{ "locale": "en-US", "label": "Date of birth" }],
+      "sd": "always",
+      "mandatory": true
+    },
+    {
+      "path": ["age_over_18"],
+      "display": [{ "locale": "en-US", "label": "Over 18", "description": "Age-over assertion for minimal disclosure" }],
+      "sd": "always"
+    },
+    {
+      "path": ["age_over_21"],
+      "display": [{ "locale": "en-US", "label": "Over 21" }],
+      "sd": "always"
+    },
+    {
+      "path": ["portrait"],
+      "display": [{ "locale": "en-US", "label": "Portrait", "description": "Holder photo (base64url JPEG)" }],
+      "sd": "always",
+      "mandatory": true,
+      "svg_id": "portrait"
+    },
+    {
+      "path": ["sex"],
+      "display": [{ "locale": "en-US", "label": "Sex" }],
+      "sd": "always"
+    },
+    {
+      "path": ["height_cm"],
+      "display": [{ "locale": "en-US", "label": "Height (cm)" }],
+      "sd": "always"
+    },
+    {
+      "path": ["eye_colour"],
+      "display": [{ "locale": "en-US", "label": "Eye colour" }],
+      "sd": "always"
+    },
+    {
+      "path": ["birth_place"],
+      "display": [{ "locale": "en-US", "label": "Place of birth" }],
+      "sd": "always"
+    },
+    {
+      "path": ["nationality"],
+      "display": [{ "locale": "en-US", "label": "Nationality" }],
+      "sd": "always"
+    },
+    {
+      "path": ["resident_address"],
+      "display": [{ "locale": "en-US", "label": "Resident address" }],
+      "sd": "always"
+    },
+    {
+      "path": ["resident_city"],
+      "display": [{ "locale": "en-US", "label": "Resident city" }],
+      "sd": "always"
+    },
+    {
+      "path": ["resident_state"],
+      "display": [{ "locale": "en-US", "label": "Resident state" }],
+      "sd": "always"
+    },
+    {
+      "path": ["resident_postal_code"],
+      "display": [{ "locale": "en-US", "label": "Resident postal code" }],
+      "sd": "always"
+    },
+    {
+      "path": ["resident_country"],
+      "display": [{ "locale": "en-US", "label": "Resident country" }],
+      "sd": "always"
+    },
+    {
+      "path": ["document_number"],
+      "display": [{ "locale": "en-US", "label": "Document number" }],
+      "sd": "always",
+      "mandatory": true
+    },
+    {
+      "path": ["administrative_number"],
+      "display": [{ "locale": "en-US", "label": "Administrative number" }],
+      "sd": "always"
+    },
+    {
+      "path": ["issuing_country"],
+      "display": [{ "locale": "en-US", "label": "Issuing country" }],
+      "sd": "never",
+      "mandatory": true
+    },
+    {
+      "path": ["issuing_authority"],
+      "display": [{ "locale": "en-US", "label": "Issuing authority" }],
+      "sd": "never",
+      "mandatory": true
+    },
+    {
+      "path": ["issuing_jurisdiction"],
+      "display": [{ "locale": "en-US", "label": "Issuing jurisdiction" }],
+      "sd": "never"
+    },
+    {
+      "path": ["un_distinguishing_sign"],
+      "display": [{ "locale": "en-US", "label": "Distinguishing sign", "description": "UN vehicle distinguishing sign (e.g. \"B\")" }],
+      "sd": "never"
+    },
+    {
+      "path": ["issue_date"],
+      "display": [{ "locale": "en-US", "label": "Issue date" }],
+      "sd": "never",
+      "mandatory": true
+    },
+    {
+      "path": ["expiry_date"],
+      "display": [{ "locale": "en-US", "label": "Expiry date" }],
+      "sd": "never",
+      "mandatory": true
+    },
+    {
+      "path": ["driving_privileges"],
+      "display": [{ "locale": "en-US", "label": "Driving privileges", "description": "Categories of vehicles the holder may drive" }],
+      "sd": "never",
+      "mandatory": true
+    },
+    {
+      "path": ["driving_privileges", null, "vehicle_category_code"],
+      "display": [{ "locale": "en-US", "label": "Vehicle category" }],
+      "sd": "never"
+    },
+    {
+      "path": ["driving_privileges", null, "issue_date"],
+      "display": [{ "locale": "en-US", "label": "Category issue date" }],
+      "sd": "never"
+    },
+    {
+      "path": ["driving_privileges", null, "expiry_date"],
+      "display": [{ "locale": "en-US", "label": "Category expiry date" }],
+      "sd": "always"
+    },
+    {
+      "path": ["driving_privileges", null, "codes", null, "code"],
+      "display": [{ "locale": "en-US", "label": "Restriction code" }],
+      "sd": "always"
+    }
+  ]
+}

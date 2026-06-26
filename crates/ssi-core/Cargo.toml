@@ -1,0 +1,61 @@
+[package]
+name = "ssi-core"
+version = "0.1.0"
+edition = "2024"
+description = "Shared SSI engine: SD-JWT VC, JWS (EdDSA + ES256), DCQL, OID4VP, status lists. Reusable by the verifier and the future wallet, native or wasm."
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+ed25519-dalek = { version = "2", features = ["rand_core", "pkcs8"] }
+# `pkcs8` lets us load the issuer's leaf P-256 private key (from a PKCS#8 PEM
+# fixture); `ecdsa`/`jwk` are the ES256 sign/verify + JWK conversion we already use
+# (feature set lives in the root `[workspace.dependencies]`).
+p256 = { workspace = true }
+rand = { workspace = true }
+sha2 = { workspace = true }
+base64 = { workspace = true }
+flate2 = { workspace = true }
+chrono = { workspace = true, features = ["clock"] }
+url = { workspace = true }
+anyhow = { workspace = true }
+
+# AES-GCM content encryption for OID4VP encrypted responses (JWE, ECDH-ES direct →
+# A128GCM/A256GCM). Pure-Rust (RustCrypto), no_std+alloc, so it builds for wasm32.
+# We supply our own IV, so getrandom/std are off; ECDH + Concat KDF live in jwe.rs
+# on top of `p256` (ecdh feature) + `sha2`, keeping crypto self-implemented (D1).
+aes-gcm = { version = "0.10", default-features = false, features = ["aes", "alloc"] }
+
+# X.509 parsing for HAIP x5c issuer-trust. Pure-Rust (RustCrypto), no_std+alloc,
+# so it builds for wasm32 too. We only PARSE certs here — all signature crypto
+# goes through `p256` (raw SEC1 point + DER ECDSA-Sig-Value), so we never depend
+# on der/spki version alignment with p256. `der` is re-exported as x509_cert::der.
+x509-cert = { version = "0.2", default-features = false, features = ["pem"] }
+
+# Native-only HTTP fetcher (status lists). Off for wasm, where the browser does
+# the fetching and hands bytes to the two-phase inspect/validate API.
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "blocking"], optional = true }
+
+# Mock-PKI generator (the offline tool that regenerates the committed fixtures
+# under fixtures/pki/). Native + test/tooling ONLY — gated behind `mock-pki` so it
+# never enters the wasm graph. `ring` backend avoids a cmake/aws-lc build dep.
+rcgen = { version = "0.13", default-features = false, features = ["pem", "ring"], optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }
+# In the browser, chrono's clock must read time via JS (Date) — `wasmbind`. This
+# feature is additive with the `clock` feature requested above.
+chrono = { workspace = true, features = ["wasmbind"] }
+
+[features]
+default = ["wallet-sim", "testkit"]
+native = ["dep:reqwest"]
+# The simulated holder/wallet, used by tests and the demo. Gated so production
+# verifier builds can drop it.
+wallet-sim = []
+# Test/demo credential minting helpers (see src/testkit.rs). Reads committed PEM
+# fixtures via include_str! — does NOT pull `mock-pki`/rcgen, so it stays wasm-safe.
+testkit = ["wallet-sim"]
+# The offline mock-PKI cert generator (src/x509.rs `mock`). Native/tooling only;
+# never enabled for the wasm build. Run `--features mock-pki` to regenerate fixtures.
+mock-pki = ["dep:rcgen"]

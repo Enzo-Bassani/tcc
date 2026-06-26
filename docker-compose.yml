@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: issuer
+      POSTGRES_PASSWORD: issuer
+      POSTGRES_DB: issuer_backend
+    ports:
+      - "5432:5432"
+    volumes:
+      - issuer_pgdata:/var/lib/postgresql/data
+
+volumes:
+  issuer_pgdata:

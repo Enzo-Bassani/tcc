@@ -1,0 +1,19 @@
+[package]
+name = "verifier-wasm"
+version = "0.1.0"
+edition = "2024"
+description = "WebAssembly bindings exposing the ssi-core verifier engine to the browser, plus local QR generation."
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# The verifier engine only — no `wallet-sim`/`testkit`, so the demo issuer's mock
+# signing key (behind `testkit`) never enters the WASM bundle served to browsers.
+# Presentation in the demo is driven by a real external holder, not an in-browser
+# simulation.
+ssi-core = { path = "../ssi-core", default-features = false }
+wasm-bindgen = "0.2"
+serde_json = { workspace = true }
+qrcode = { version = "0.14", default-features = false, features = ["svg"] }
+console_error_panic_hook = "0.1"
