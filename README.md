@@ -1,94 +1,93 @@
-# SSI system (issuer + verifier) — TCC
+# SSI for Academic Diplomas — issuer · verifier · wallet
 
-A Self-Sovereign Identity system for a course-conclusion project (TCC), built in Rust as a
-**cargo workspace**:
+A **Self-Sovereign Identity (SSI)** system that issues academic diplomas as
+**Verifiable Credentials** and verifies them — built as a course-conclusion project
+(TCC, UFSC). It implements the full holder ↔ issuer ↔ verifier triangle on open
+standards: diplomas are minted as **SD-JWT VCs** over **OID4VCI**, held in a mobile
+wallet, and presented over **OID4VP 1.0** with selective disclosure.
 
-- **Issuer** (`issuer_backend`, root) — issues academic diplomas as **SD-JWT Verifiable
-  Credentials** over **OID4VCI**, with a `did:web` identity and IETF Token Status List
-  revocation (axum + sqlx + PostgreSQL).
-- **`ssi-core`** (`crates/ssi-core`) — the shared SSI engine (JWS EdDSA+ES256, SD-JWT, DCQL,
-  OID4VP, status lists, `did:web`); native **and** WebAssembly.
-- **Verifier** — a universal **OID4VP 1.0** verifier whose cryptographic checks run entirely
-  in the browser (`crates/verifier-wasm` + the static app in `web/`), bridged to wallets by a
-  dumb transport relay (`crates/relay`).
-- **Wallet** (`wallet/`, Kotlin/Android — a separate Gradle build) — the **holder**: receives
-  credentials over OID4VCI, stores them, and presents them over OID4VP. Its SSI engine is a
-  pure-Kotlin port of `wallet_sim`, proven byte-compatible with the verifier by the conformance
-  oracle in `crates/wallet-core`. See `wallet/README.md`.
+The cryptographic engine is written once in Rust (`ssi-core`) and reused everywhere —
+natively on the issuer, compiled to **WebAssembly** in the browser verifier, and
+re-implemented in Kotlin for the wallet, with a conformance oracle proving the two
+ports are byte-compatible.
 
-## Quick start
+## Components
 
-```sh
-# 1. Start PostgreSQL
-docker compose up -d
+| Component | Where | What it is |
+|-----------|-------|------------|
+| **Issuer** | `src/`, root crate `issuer_backend` | Issues diplomas as SD-JWT VCs over **OID4VCI**, with a `did:web` identity and IETF Token Status List revocation (axum + sqlx + PostgreSQL). |
+| **`ssi-core`** | `crates/ssi-core` | The shared SSI engine — JWS (EdDSA + ES256), SD-JWT, DCQL, OID4VP, status lists, `did:web`. Native **and** WebAssembly. |
+| **Verifier** | `crates/verifier-wasm` + `web/` | A universal **OID4VP 1.0** verifier whose crypto runs **entirely in the browser** (WASM), bridged to wallets by a dumb transport relay (`crates/relay`). |
+| **Wallet** | `wallet/` (Kotlin/Android) | The **holder**: receives credentials over OID4VCI, stores them, and presents them over OID4VP. Its engine is a pure-Kotlin port of `ssi-core`, proven byte-compatible by the oracle in `crates/wallet-core`. See [`wallet/README.md`](wallet/README.md). |
 
-# 2. Run the server (creates keys/ and runs migrations on first start)
-cargo run
+## Dependencies
 
-# 3. Offline demo — print a sample diploma SD-JWT, no database needed
-cargo run -- issue-test
-```
+To build and run the backend (issuer + verifier + relay) and the Rust test suite:
 
-The server listens on `http://localhost:8080` by default. Configure via
-`config/default.toml` or `ISSUER__*` environment variables
-(e.g. `ISSUER__DATABASE_URL=...`).
+- **Rust** (stable, edition 2024) + `cargo`
+- **Docker** + Docker Compose — runs PostgreSQL 16 (the only datastore)
+- **`wasm-pack`** — builds the browser verifier's WebAssembly bundle
+- **[`just`](https://github.com/casey/just)** — task runner for all the recipes below
+- *Optional:* `qrencode` (terminal QR codes for offers), `curl`, `python3`, a browser
 
-## Endpoints
+To build and run the **wallet** you additionally need a **JDK 17** and the **Android
+SDK** (+ an emulator). The pure-Kotlin engine and its tests run with **only a JDK** —
+no Android stack required.
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET  | `/health` | Liveness |
-| GET  | `/.well-known/did.json` | did:web document |
-| GET  | `/.well-known/jwks.json` | Issuer public key |
-| GET  | `/.well-known/openid-credential-issuer` | OID4VCI issuer metadata |
-| GET  | `/.well-known/oauth-authorization-server` | OAuth AS metadata |
-| POST | `/credential-offer` | Mint a Credential Offer (admin, Basic auth) |
-| GET  | `/credential-offer/{id}` | Fetch a Credential Offer |
-| GET  | `/authorize` | OAuth authorization endpoint |
-| POST | `/token` | Token endpoint (auth-code + pre-authorized) |
-| POST | `/nonce` | Issue a `c_nonce` |
-| POST | `/credential` | Issue the SD-JWT VC |
-| GET  | `/status-lists/{id}` | Token Status List JWT |
-| POST | `/admin/credentials/{jti}/revoke` | Revoke (admin, Basic auth) |
-| GET/POST | `/mock-idp/login` | Mock university SSO |
+> **Setup instructions for all of the above are in [`docs/INSTALL.md`](docs/INSTALL.md).**
 
-## Testing
-
-The whole system is tested across the workspace. **Only the issuer's integration tests need a
-database**; the entire engine + verifier suite runs with nothing installed but Rust. Tests
-that need a DB **skip cleanly** (printing a SKIP notice) when `TEST_DATABASE_URL` is unset, so
-the commands below never fail for lack of Postgres.
-
-### Run everything
-
-The whole suite is one command (via [`just`](https://github.com/casey/just)):
+## Quick start — deploy and use
 
 ```sh
-just test        # Rust workspace + DB-backed issuer tests + clippy + Kotlin wallet suite
+just deploy        # Postgres + WASM verifier + issuer + relay, all in the background
 ```
 
-This is the canonical "did I break anything?" check after any code change; it starts
-Postgres, sets `TEST_DATABASE_URL`, and re-runs the Kotlin conformance oracle for you. Run
-`just --list` for granular recipes (`test-rust`, `test-db`, `test-wallet`, `clippy`, `db-up`);
-the recipes live in `justfile`.
+This auto-detects a LAN IP, builds the WASM verifier, launches the issuer
+(`:8080`) and the relay/verifier app (`:8090`), and waits until both are healthy.
+Logs go to `.dev-logs/`; stop everything with `just teardown`.
 
-### What the tests cover
+Then issue and present a diploma:
 
-`just test` wraps these underlying commands; run them directly to scope a single area:
+```sh
+just offer-qr      # mint a credential offer for a seeded student, as a terminal QR
+just verifier      # open the browser verifier (served by the relay) to request a presentation
+```
 
+Scan the offer QR with the wallet (`just wallet` builds/installs it on an emulator —
+see [`wallet/README.md`](wallet/README.md)) to receive the diploma, then scan the
+verifier's request QR to present it. Handy admin helpers: `just credentials` (list
+issued), `just revoke <jti>` / `just revoke-last`, `just health`. Run `just --list`
+for the full set.
 
-| Command | Database? | Covers |
-|---------|-----------|--------|
-| `cargo test -p ssi-core` | no | Engine units (JWS EdDSA+ES256, SD-JWT, DCQL matching, status, did:web) **and** `tests/engine.rs`: full issue→present→validate for EdDSA + ES256, plus revoked / wrong-nonce (replay) / tampered-signature / `inspect` failure modes. |
-| `cargo test -p relay --test e2e` | no | Verifier over the real relay (HTTP): valid round-trip, revoked → invalid, unsatisfiable DCQL → no presentation, and **issuer↔verifier interop** (a real diploma minted by the issuer crate validates in the verifier). |
-| `cargo test -p relay --test walkthrough -- --nocapture` | no | The **narrated OID4VP presentation walkthrough** — every message + the decoded presentation and verification report (see below). |
-| `cargo test -p issuer_backend --lib` | no | Issuer unit tests (did:web document generation). |
-| `cargo test -p issuer_backend` | **yes** | Issuer OID4VCI integration: `tests/e2e.rs` (pre-authorized + auth-code flows: offer → token → credential → verify → revoke → confirm status bit) and the issuer walkthrough. Skips without `TEST_DATABASE_URL`. |
+> **No wallet/emulator?** You can see a diploma SD-JWT without a database or a phone:
+> `cargo run -- issue-test` prints a sample credential offline.
 
-### The two narrated walkthroughs
+## Running the tests
 
-These print the full protocol exchange step by step (require `-- --nocapture`); they are the
-best way to *see* each protocol and are handy for the thesis/defense:
+The whole system is tested across the cargo workspace plus the Kotlin wallet suite.
+**One command runs everything:**
+
+```sh
+just test          # Rust workspace + DB-backed issuer tests + clippy + Kotlin conformance
+```
+
+This is the canonical "did I break anything?" check: it starts Postgres, sets
+`TEST_DATABASE_URL`, runs the full Rust suite and clippy, and re-runs the Kotlin
+conformance oracle.
+
+Scope to a single area with the underlying recipes (`just --list`):
+
+| Recipe | Database? | Covers |
+|--------|-----------|--------|
+| `just test-rust` | no | Whole Rust workspace: engine units, full issue→present→validate (EdDSA + ES256), revoked / replay / tamper failure modes, verifier-over-relay E2E, issuer↔verifier interop. |
+| `just test-db` | **yes** | Issuer OID4VCI integration (pre-authorized + auth-code flows → token → credential → verify → revoke) and the full-stack HTTP E2E. Skips cleanly without `TEST_DATABASE_URL`. |
+| `just clippy` | no | Lint across the workspace (kept warning-free). |
+| `just test-wallet` | no | Kotlin wallet suite + the cross-language conformance oracle. |
+
+### Narrated protocol walkthroughs
+
+Two tests print the full protocol exchange step by step — the best way to *see* each
+flow:
 
 ```sh
 # OID4VP — verifier requesting and validating a presentation (no database)
@@ -99,38 +98,15 @@ TEST_DATABASE_URL=postgres://issuer:issuer@localhost:5432/issuer_backend \
   cargo test -p issuer_backend --test walkthrough -- --nocapture
 ```
 
-### Run a single test
+## Configuration
 
-```sh
-cargo test -p ssi-core es256_issuer_verifies
-cargo test -p relay --test e2e issuer_interop_real_diploma_verifies
-cargo test -p issuer_backend --test e2e pre_authorized_flow_issues_and_revokes
-```
-
-### Lint
-
-```sh
-cargo clippy --workspace --all-targets   # kept warning-free
-```
-
-> Note: the browser demo's WebAssembly bundle (`web/pkg/`) is a build artifact, not committed.
-> It is not needed to run the tests; build it only to run the demo
-> (`wasm-pack build crates/verifier-wasm --target web --out-dir ../../web/pkg`).
-
-## Manual verification
-
-```sh
-curl localhost:8080/.well-known/did.json
-curl localhost:8080/.well-known/openid-credential-issuer
-
-# Pre-authorized flow
-curl -u admin:admin -X POST localhost:8080/credential-offer \
-  -H 'content-type: application/json' \
-  -d '{"student_number":"2020000001","grant":"pre_authorized"}'
-```
+The issuer reads `config/default.toml`, overridable by `ISSUER__*` environment
+variables (e.g. `ISSUER__DATABASE_URL=...`, `ISSUER__ISSUER_URL=...`). It listens on
+`http://localhost:8080` by default.
 
 ## Security note
 
-The issuer signing key is stored **in plaintext** under `keys/` — acceptable for
-this TCC prototype only. A production deployment must use a KMS/HSM and integrate
-the real university SSO in place of the mock IdP.
+This is a **prototype**. The issuer signing key is stored **in plaintext** under
+`keys/`, and the university SSO is a mock IdP — both acceptable for a TCC only. A
+production deployment must use a KMS/HSM for the signing key and integrate the real
+institutional SSO.

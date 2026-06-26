@@ -1,133 +1,153 @@
-# TCC Wallet (Kotlin/Android)
+# TCC Wallet — the holder
 
-The **holder** of the SSI triangle: receives credentials from the issuer over
-**OID4VCI**, stores them and the holder key that binds them, and presents them to
-the verifier over **OID4VP 1.0** — disclosing only what is asked. It is built to be
-byte-for-byte compatible with this repo's issuer and verifier.
+The **mobile holder** of the [SSI diploma system](../README.md): a Kotlin/Android app
+that receives academic diplomas as **SD-JWT Verifiable Credentials** over **OID4VCI**,
+stores them on the device, and presents them over **OID4VP 1.0** with selective
+disclosure. It is the third corner of the holder ↔ issuer ↔ verifier triangle — the only
+party that ever holds the credential and the holder key that binds it.
 
-> **First Android/Kotlin project?** Read "Toolchain" then "Run the tests" below —
-> you can see the core working with **only a JDK + Gradle**, before installing the
-> full Android stack.
+Its SSI engine is a **pure-Kotlin port of the Rust `ssi-core`**, written to produce the
+exact same wire bytes the native engine does. A cross-language conformance oracle
+(`crates/wallet-core`) proves the two ports agree: a presentation built in Kotlin must
+make the *real* Rust verifier report `valid == true`, or the build fails.
 
-## Layout
+## Two modules
 
-```
-wallet/
-├── ssi/   ← pure Kotlin/JVM SSI engine + protocol clients. NO Android deps, so it
-│           builds and tests with just a JDK. This is the compatibility-critical code.
-│   ├── src/main/kotlin/com/tcc/wallet/ssi/        Bytes, HolderKey, Jws, SdJwt, Dcql,
-│   │     SsiEngine, KotlinSsiEngine, net/{Http,Oid4vciClient,Oid4vpPresenter,OfferLink}
-│   └── src/test/kotlin/com/tcc/wallet/ssi/        EngineUnitTest, ConformanceTest
-└── app/   ← the thin Android shell (Jetpack Compose UI, key/credential storage) on top of :ssi
-```
+The project is split so the SSI logic can be tested **without an emulator** — the engine
+has no Android dependencies and runs on a plain JDK.
 
-The engine is the same idea as Rust `ssi-core`: framework-agnostic and reusable.
-The Android-specific bits (UI, storage, deep links) live only in `:app`.
+| Module | Stack | What it is |
+|--------|-------|------------|
+| **`:ssi`** | Kotlin/JVM (no Android) | The framework-agnostic SSI engine + protocol clients: SD-JWT, DCQL selective disclosure, JWS/JWE, the OID4VCI issuance client, the OID4VP presenter, and `x5c` issuer-trust validation. Builds and tests with **only a JDK** — including the Rust conformance oracle. |
+| **`:app`** | Android (Jetpack Compose) | The phone shell that wraps `:ssi`: the Compose UI, QR scanning, on-device storage, the hardware-backed holder key, and deep-link/redirect plumbing. Depends on `:ssi`. |
 
-## How compatibility is guaranteed
+Everything cryptographic lives in `:ssi`; `:app` only adds the phone — keys in secure
+hardware, a camera, a file, and a screen.
 
-The engine logic is a faithful port of the reference holder `ssi_core::wallet_sim`.
-The guard against drift is the Rust **conformance oracle** in
-[`../crates/wallet-core`](../crates/wallet-core): `ConformanceTest` (in `:ssi`)
-generates a holder key, asks the oracle to `mint` a credential bound to it, builds
-a VP Token with the Kotlin engine, and asks the oracle to `verify` it with the
-**real** `ssi_core::oid4vp::validate_vp_token`. Green = the wallet is compatible.
-(This has already been run during development — the Kotlin VP Token verifies
-`valid == true`, and a revoked credential is correctly rejected.)
+## What it does
 
----
+### Receiving a diploma — OID4VCI 1.0
 
-## Toolchain — what to install
+`Oid4vciClient` drives the issuance handshake (discovery → token → nonce → credential)
+and hands the compact SD-JWT VC back to be stored. Both OID4VCI grants are supported:
 
-| Tool | Why | Install (Arch) |
-|------|-----|----------------|
-| **JDK 17** | Kotlin compiles to JVM bytecode; the Android build needs it. | `pacman -S jdk17-openjdk` |
-| **Android Studio** | The IDE; bundles the SDK manager, the emulator, and Gradle. | AUR `android-studio`, JetBrains Toolbox, or the official tarball |
-| **Android SDK 34 + Platform-Tools + an emulator image** | Compile the APK; run it. | First launch of Android Studio → SDK Manager |
-| **Rust + cargo** | Only to run the cross-language `ConformanceTest` (already in this repo). | already installed here |
+- **Pre-authorized code** — a single round-trip; the offer QR carries the code, no
+  browser needed.
+- **Authorization code** — a browser round-trip to the issuer's `/authorize` → mock
+  university SSO, with **PKCE S256** and an RFC 9207 `iss` mix-up check. Split across the
+  browser trip: the wallet opens a Chrome Custom Tab and resumes on the
+  `com.tcc.wallet://oid4vci` redirect.
 
-Once Android Studio is installed, **open the `wallet/` folder** — it will sync
-Gradle automatically and create the Gradle wrapper. From the CLI you can instead
-install Gradle (`pacman -S gradle`) and run `gradle wrapper` once to generate
-`./gradlew`.
+The holder-binding proof (`openid4vci-proof+jwt`) is signed by the device key, so its
+public JWK becomes the credential's `cnf`. A received credential is **validated before
+it is ever stored** (see [Issuer trust](#issuer-trust-at-receipt) below) — an
+untrustworthy credential is rejected, never persisted.
 
-> The version catalog (`gradle/libs.versions.toml`) pins a known-good AGP 8.5.2 /
-> Kotlin 2.0.20 / compileSdk 34 baseline. If Android Studio's AGP Upgrade Assistant
-> offers newer versions, accepting them is fine.
+### Presenting a diploma — OID4VP 1.0
 
----
+`Oid4vpPresenter` answers a verifier's request over this repo's transport relay. The
+signed Authorization Request arrives **by value in the QR**
+(`openid4vp://?client_id=<did:jwk>&request=<JAR JWT>`), so the wallet:
 
-## Run the tests
+1. verifies the request's **did:jwk JAR** signature against the QR's `client_id` (its
+   trust anchor);
+2. resolves which held credentials satisfy the **DCQL** query, and which claims each
+   would disclose;
+3. builds the **VP Token** — selecting only the requested disclosures and appending a
+   key-binding JWT bound to the verifier's nonce, audience, and `sd_hash`;
+4. **JWE-encrypts** the response to the verifier's ephemeral key (`direct_post.jwt`) and
+   POSTs the opaque ciphertext to the request's `response_uri`.
 
-The SSI engine tests need **no Android SDK and no device** — `:ssi` is a plain JVM
-module:
+The consent screen shows both what the verifier explicitly asked for **and** the
+issuer-signed claims that travel with every presentation and cannot be withheld (the
+credential type, issuer, validity window, revocation pointer, key binding), so the holder
+sees the full disclosure before sharing.
+
+### Issuer trust at receipt
+
+`IssuerTrust` is the wallet's side of the HAIP §6.1.1 `x5c` model — a mirror of the
+verifier's `ssi_core::x509`. Before a credential (or signed issuer metadata) is accepted
+it must: carry an `x5c` chain, verify its **ES256** signature under the leaf certificate,
+chain up to a locally-held trusted root (leaf-not-CA, no self-signed cert in `x5c`), and
+bind its `iss` claim to the leaf. The bundled anchor is the mock **ICP-Brasil** root —
+the same default the verifier uses.
+
+### The holder key
+
+An **ES256 (P-256)** key — the HAIP §7 baseline, and the algorithm Android Keystore can
+hardware-back. The `HolderKey` interface is the seam between key material and the
+protocol (callers only ever need `sign` and `publicJwk`), with two backings:
+
+- **`KeystoreHolderKey`** (`:app`) — generated **non-exportable** in the Android Keystore,
+  **StrongBox-preferred** with a TEE fallback. The private scalar never leaves secure
+  hardware; this is what ships in the wallet and gives the ARF/EUDI device-binding
+  guarantee.
+- **`SoftwareHolderKey`** (`:ssi`) — a BouncyCastle key with the scalar in memory, used by
+  the conformance oracle and anywhere that must run on a plain JDK.
+
+Both emit identical JOSE raw `R‖S` signatures, so a Keystore-signed token verifies exactly
+like a software-signed one.
+
+## The UI
+
+A single-activity **Jetpack Compose** app. The whole interface — home list, credential
+detail, the receive and present sheets, QR scanner, and raw-JSON viewer — is driven
+entirely by the real `:ssi` flows through one `WalletViewModel`; nothing is mocked.
+
+- **QR scanning** uses CameraX with ML Kit's **bundled** barcode decoder (no Google Play
+  Services dependency).
+- **Storage** is deliberately minimal: the list of SD-JWT strings in a private JSON file
+  (`WalletStore`). The holder key is *not* in that file — it lives in the Keystore.
+- **Entry points** are unified: a scanned QR, a pasted link, or a deep link
+  (`openid-credential-offer://`, `openid4vp://`) is classified by `ScanDispatch` and routed
+  to issuance or presentation automatically.
+
+## Building and testing
+
+The toolchain (JDK 17, Android SDK, an emulator) is covered in
+[`../docs/INSTALL.md`](../docs/INSTALL.md). All recipes run from the **prototype root**
+(`cd ..`):
+
+| Recipe | Needs | What it does |
+|--------|-------|--------------|
+| `just test-wallet` | **JDK only** | Runs the `:ssi` suite — engine units, DCQL/SD-JWT, JWE round-trips, OID4VCI client, `x5c` issuer trust, **and** the cross-language conformance oracle. |
+| `just wallet` | JDK + Android SDK + emulator | Build + install + launch the app on an emulator (boots one if none is connected). The iterate-loop recipe. |
+| `just wallet-fresh` | JDK + Android SDK + emulator | Clean reinstall, then launch. |
+| `just emulator` | Android SDK | Boot an emulator (idempotent). |
+
+The conformance test shells out to `cargo` to drive the Rust `wallet-conformance` CLI; if
+`cargo` isn't on `PATH` it is **skipped, not failed**, so `:ssi` still builds on a machine
+without the Rust workspace. `just test-wallet` is also folded into the top-level
+`just test`.
+
+### See a full flow end to end
+
+Bring up the backend and mint an offer, then drive the phone:
 
 ```sh
-cd wallet
-./gradlew :ssi:test            # engine unit tests + the Rust conformance oracle
+cd ..
+just deploy        # Postgres + WASM verifier + issuer + relay
+just offer-qr      # a credential-offer QR for a seeded student
+just wallet        # build + launch the wallet on an emulator
 ```
 
-`ConformanceTest` shells out to `cargo` (this repo's `wallet-core`). If `cargo`
-isn't on `PATH` it is **skipped**, not failed. `EngineUnitTest` always runs.
+Scan the offer QR (Receive) to get the diploma, then `just verifier` and scan its request
+QR (Present) to share it. The debug build permits cleartext to any host, so the emulator
+talks to the LAN-IP backend without extra setup.
 
-The Rust side has its own copy of the loop (no Kotlin needed):
+## Engine parity, and the road to Rust
 
-```sh
-cargo test -p wallet-core      # mint → wallet_sim → verify, + revoked/tampered cases
-```
+`KotlinSsiEngine` is the **Phase 1** implementation — a faithful hand-port of
+`ssi_core::wallet_sim`. The `SsiEngine` interface exists so the implementation can be
+swapped without touching the app: a **Phase 2** `RustSsiEngine` would call `ssi-core`
+directly over UniFFI for exact, no-second-port parity. The same conformance oracle guards
+both, so the swap is provable rather than hoped-for.
 
----
+## Security note
 
-## Build & run the app
-
-```sh
-cd wallet
-./gradlew assembleDebug        # → app/build/outputs/apk/debug/app-debug.apk
-./gradlew installDebug         # build + install onto a running emulator/phone
-```
-
-Or just press **Run ▶** in Android Studio with an emulator/device selected.
-
-### Networking — read this, it bites immediately
-The app talks to the issuer (`:8080`) and relay (`:8090`) running on your dev host.
-
-- **Emulator:** the host is reachable at **`10.0.2.2`**, not `localhost`. Start the
-  services so their advertised URLs use it:
-  ```sh
-  ISSUER__ISSUER_URL=http://10.0.2.2:8080 ISSUER__BIND_ADDR=0.0.0.0:8080 cargo run
-  RELAY_BIND=0.0.0.0:8090 RELAY_BASE_URL=http://10.0.2.2:8090 cargo run -p relay
-  ```
-- **Physical phone:** use your host's **LAN IP** everywhere instead of `10.0.2.2`.
-  No network-config edit is needed — the debug build permits cleartext to any host
-  (dev-only — see decision W8).
-
----
-
-## End-to-end demo (emulator)
-
-1. Start Postgres + issuer + relay (with the `10.0.2.2` env vars above) and build the
-   verifier demo: `wasm-pack build crates/verifier-wasm --target web --out-dir ../../web/pkg`, then `cargo run -p relay` serves it on `:8090`.
-2. **Issue:** mint an offer and copy its `openid_link`:
-   ```sh
-   curl -u admin:admin -X POST http://localhost:8080/credential-offer \
-     -H 'content-type: application/json' \
-     -d '{"student_number":"2020000001","grant":"pre_authorized"}'
-   ```
-   In the wallet, tap **Scan QR** under "Receive a credential" and scan a QR of that
-   `openid_link` (e.g. `qrencode -o offer.png "<openid_link>"`), or paste it into
-   **"Offer link or JSON"** → **Receive credential**.
-3. **Present:** in the `web/` verifier, start a request — it renders the relay
-   `request_uri` as a QR. In the wallet tap **Scan QR** under "Present a credential" and
-   scan it (or copy the `request_uri` and paste it into **"Relay request_uri"**) →
-   **Fetch** → review the requested claims → **Consent & present**. The verifier shows `valid`.
-
-> QR scanning (CameraX + ML Kit) is the primary path; pasting the link or arriving via an
-> `openid-credential-offer://` / `openid4vp://` deep link remain as fallbacks. The first
-> scan prompts for the camera permission. For QR scanning on the **emulator**, set the AVD's
-> back camera to **Webcam0** (Extended controls → Camera) and hold the QR up to your webcam;
-> a physical phone pointed at the on-screen QR is simpler.
->
-> On a **16 KB-page** emulator image you'll see a harmless "not 16 KB compatible" dialog —
-> CameraX 1.3.4's `libimage_processing_util_jni.so` is 4 KB-aligned, so the app runs in
-> page-size-compat mode. It's cosmetic (no effect on a 4 KB image or current phones); the fix
-> would be CameraX ≥ 1.4.x, which requires `compileSdk ≥ 35`, deferred for this prototype.
+This is a **prototype** for a TCC. The holder key is properly hardware-backed and
+non-exportable, but the trust anchor is a **mock ICP-Brasil root**, the issuer's SSO is a
+mock IdP, and the pending authorization-code state is kept in memory (not persisted across
+process death). A production wallet would anchor at the real national PKI and integrate the
+institution's actual SSO. See the [system README](../README.md#security-note) for the
+backend's equivalent caveats.
