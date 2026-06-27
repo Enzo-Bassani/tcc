@@ -18,6 +18,7 @@ mod common;
 use common::spawn;
 use serde_json::{Value, json};
 use ssi_core::testkit::{self, DEMO_VCT};
+use std::sync::Arc;
 use ssi_core::wallet_sim::StoredCredential;
 use ssi_core::{crypto, oid4vp, sd_jwt};
 
@@ -168,7 +169,7 @@ async fn oid4vp_protocol_walkthrough() {
     );
     let wallet = vec![StoredCredential {
         sd_jwt: demo.sd_jwt.clone(),
-        holder: demo.holder.clone(),
+        holder: Arc::new(demo.holder.clone()),
     }];
     let vp_token = ssi_core::wallet_sim::create_vp_token(&request, &wallet).unwrap();
     show(

@@ -77,21 +77,9 @@ async fn spawn_issuer() -> Option<String> {
 }
 
 /// Build a wallet proof-of-possession JWT bound to `audience` + `nonce` (OID4VCI).
+/// Delegates to the shared engine so the test exercises the real wire format.
 fn build_proof(holder: &HolderKey, audience: &str, nonce: &str) -> String {
-    let header = json!({
-        "typ": "openid4vci-proof+jwt",
-        "jwk": holder.public_jwk(),
-    });
-    let iat = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-    let payload = json!({
-        "aud": audience,
-        "iat": iat,
-        "nonce": nonce,
-    });
-    holder.sign_jws(&header, &payload)
+    ssi_core::oid4vci::build_vci_proof(holder, audience, nonce).expect("in-memory proof signing")
 }
 
 /// Drive the full pre-authorized OID4VCI flow over HTTP and return the issued
@@ -228,7 +216,7 @@ async fn issued_diploma_presents_and_verifies_over_the_relay() {
     let status_uri = payload["status"]["status_list"]["uri"].as_str().unwrap();
 
     let fetcher = status_fetcher(&http, &issuer, status_uri).await;
-    let wallet = vec![StoredCredential { sd_jwt, holder }];
+    let wallet = vec![StoredCredential { sd_jwt, holder: Arc::new(holder) }];
     let dcql = name_and_degree(&vct);
 
     let report = round_trip(
@@ -295,7 +283,7 @@ async fn revoked_diploma_fails_verification_over_the_relay() {
 
     // Re-fetch the (now updated) status list and present.
     let fetcher = status_fetcher(&http, &issuer, status_uri).await;
-    let wallet = vec![StoredCredential { sd_jwt, holder }];
+    let wallet = vec![StoredCredential { sd_jwt, holder: Arc::new(holder) }];
     let dcql = name_and_degree(&vct);
 
     let report = round_trip(

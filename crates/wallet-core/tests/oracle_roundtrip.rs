@@ -6,6 +6,7 @@
 
 use ssi_core::holder::HolderKey;
 use ssi_core::oid4vp::{self, Check};
+use std::sync::Arc;
 use ssi_core::wallet_sim::{StoredCredential, create_response, create_vp_token, encrypt_response};
 use wallet_core::{mint_bundle, verify_bundle};
 
@@ -19,7 +20,7 @@ fn present(revoked: bool) -> (wallet_core::Bundle, serde_json::Value) {
         .expect("bundle's signed request verifies");
     let wallet = vec![StoredCredential {
         sd_jwt: bundle.sd_jwt.clone(),
-        holder: holder.clone(),
+        holder: Arc::new(holder.clone()),
     }];
     let response = create_response(&request, &wallet).expect("wallet builds a response");
     (bundle, response)
@@ -58,7 +59,7 @@ fn tampered_disclosure_breaks_holder_binding() {
     let request = oid4vp::verify_request(&bundle.request_jwt, &bundle.client_id).unwrap();
     let wallet = vec![StoredCredential {
         sd_jwt: bundle.sd_jwt.clone(),
-        holder: holder.clone(),
+        holder: Arc::new(holder.clone()),
     }];
     let mut vp_token = create_vp_token(&request, &wallet).unwrap();
 

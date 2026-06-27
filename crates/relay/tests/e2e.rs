@@ -9,6 +9,7 @@ use ssi_core::dcql::DcqlQuery;
 use ssi_core::oid4vp;
 use ssi_core::resolve::MapFetcher;
 use ssi_core::testkit::{self, DEMO_VCT};
+use std::sync::Arc;
 use ssi_core::wallet_sim::StoredCredential;
 
 fn name_dcql() -> DcqlQuery {
@@ -29,7 +30,7 @@ async fn relay_round_trip_is_valid() {
     let demo = testkit::mint(false);
     let wallet = vec![StoredCredential {
         sd_jwt: demo.sd_jwt.clone(),
-        holder: demo.holder.clone(),
+        holder: Arc::new(demo.holder.clone()),
     }];
     let report = round_trip(&relay.base, &name_dcql(), &wallet, &demo.fetcher, &testkit::demo_trust_store())
         .await
@@ -43,7 +44,7 @@ async fn revoked_credential_via_relay_is_invalid() {
     let demo = testkit::mint(true); // revoked
     let wallet = vec![StoredCredential {
         sd_jwt: demo.sd_jwt.clone(),
-        holder: demo.holder.clone(),
+        holder: Arc::new(demo.holder.clone()),
     }];
     let report = round_trip(&relay.base, &name_dcql(), &wallet, &demo.fetcher, &testkit::demo_trust_store())
         .await
@@ -61,7 +62,7 @@ async fn unsatisfiable_query_yields_no_presentation() {
     let demo = testkit::mint(false);
     let wallet = vec![StoredCredential {
         sd_jwt: demo.sd_jwt.clone(),
-        holder: demo.holder.clone(),
+        holder: Arc::new(demo.holder.clone()),
     }];
     // Ask for a credential type the wallet does not hold → all-or-nothing: the
     // wallet returns no presentation (surfaced here as a create error).
@@ -133,7 +134,7 @@ async fn issuer_interop_real_diploma_verifies() {
 
     let wallet = vec![StoredCredential {
         sd_jwt,
-        holder,
+        holder: Arc::new(holder),
     }];
     let report = round_trip(&relay.base, &dcql, &wallet, &fetcher, &testkit::demo_trust_store())
         .await

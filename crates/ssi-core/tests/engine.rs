@@ -7,6 +7,7 @@
 use serde_json::{Value, json};
 use ssi_core::dcql::DcqlQuery;
 use ssi_core::testkit;
+use std::sync::Arc;
 use ssi_core::wallet_sim::StoredCredential;
 use ssi_core::{oid4vp, testkit::DEMO_VCT};
 
@@ -40,7 +41,7 @@ fn drive_trust(demo: &testkit::DemoCredential, trust: &ssi_core::trust::TrustSto
 
     let wallet = vec![StoredCredential {
         sd_jwt: demo.sd_jwt.clone(),
-        holder: demo.holder.clone(),
+        holder: Arc::new(demo.holder.clone()),
     }];
     let vp_token = ssi_core::wallet_sim::create_vp_token(&request, &wallet).unwrap();
 
@@ -148,7 +149,7 @@ fn wrong_nonce_breaks_holder_binding() {
 
     let wallet = vec![StoredCredential {
         sd_jwt: demo.sd_jwt.clone(),
-        holder: demo.holder.clone(),
+        holder: Arc::new(demo.holder.clone()),
     }];
     let vp_token = ssi_core::wallet_sim::create_vp_token(&request, &wallet).unwrap();
 
@@ -173,7 +174,7 @@ fn tampered_issuer_signature_is_caught() {
         oid4vp::build_signed_request(&dcql, &nonce, &state, "https://verifier.example/r").request;
     let wallet = vec![StoredCredential {
         sd_jwt: demo.sd_jwt.clone(),
-        holder: demo.holder.clone(),
+        holder: Arc::new(demo.holder.clone()),
     }];
     let mut vp_token = ssi_core::wallet_sim::create_vp_token(&request, &wallet).unwrap();
 
@@ -210,7 +211,7 @@ fn inspect_reports_only_status_urls() {
         oid4vp::build_signed_request(&dcql, &nonce, &state, "https://verifier.example/r").request;
     let wallet = vec![StoredCredential {
         sd_jwt: demo.sd_jwt.clone(),
-        holder: demo.holder.clone(),
+        holder: Arc::new(demo.holder.clone()),
     }];
     let vp_token = ssi_core::wallet_sim::create_vp_token(&request, &wallet).unwrap();
 
@@ -241,7 +242,7 @@ fn signed_request_and_encrypted_response_roundtrip() {
         .expect("signed request must verify");
     let wallet = vec![StoredCredential {
         sd_jwt: demo.sd_jwt.clone(),
-        holder: demo.holder.clone(),
+        holder: Arc::new(demo.holder.clone()),
     }];
     let response = ssi_core::wallet_sim::create_response(&request, &wallet).unwrap();
 
@@ -302,11 +303,48 @@ fn wrong_enc_key_cannot_decrypt_response() {
     let request = oid4vp::verify_request(&signed.request_jwt, &signed.client_id).unwrap();
     let wallet = vec![StoredCredential {
         sd_jwt: demo.sd_jwt.clone(),
-        holder: demo.holder.clone(),
+        holder: Arc::new(demo.holder.clone()),
     }];
     let response = ssi_core::wallet_sim::create_response(&request, &wallet).unwrap();
 
     // A different session's private key (what a key-swapping relay would hold) can't open it.
     let other = oid4vp::build_signed_request(&dcql, &nonce, &state, "https://verifier.example/r");
     assert!(oid4vp::decrypt_response(&response, &other.enc_private_jwk).is_err());
+}
+
+#[test]
+fn find_matches_reports_disclosed_and_always_shared() {
+    use std::collections::{HashMap, HashSet};
+
+    let demo = testkit::mint(false);
+    let (dcql, _) = name_query();
+    let (nonce, state) = oid4vp::fresh_request_ids();
+    let request = oid4vp::build_signed_request(&dcql, &nonce, &state, "https://verifier.example/r").request;
+    let sd_jwts = vec![demo.sd_jwt.clone()];
+
+    let matches = ssi_core::wallet_sim::find_matches(&request, &sd_jwts).unwrap();
+    assert_eq!(matches.len(), 1);
+    let qm = &matches[0];
+    assert_eq!(qm.query_id, "diploma");
+    assert_eq!(qm.vct.as_deref(), Some(DEMO_VCT));
+    assert_eq!(qm.matches.len(), 1, "the held diploma satisfies the query");
+
+    let m = &qm.matches[0];
+    assert_eq!(m.index, 0);
+    assert_eq!(m.vct.as_deref(), Some(DEMO_VCT));
+
+    // disclosed = exactly the two requested claims, with their raw values.
+    let disclosed: HashMap<String, Value> =
+        m.disclosed.iter().map(|d| (d.path.join("."), d.value.clone())).collect();
+    assert_eq!(disclosed.len(), 2);
+    assert_eq!(disclosed["given_name"], json!("Ada"));
+    assert_eq!(disclosed["family_name"], json!("Lovelace"));
+
+    // always_shared carries the signed metadata the holder can't withhold, but
+    // never the selectively-disclosed claims.
+    let always: HashSet<String> = m.always_shared.iter().map(|d| d.path.join(".")).collect();
+    assert!(always.contains("vct"), "vct travels with every presentation");
+    assert!(always.contains("cnf"), "holder key binding is always shared");
+    assert!(!always.contains("given_name"));
+    assert!(!always.contains("family_name"));
 }
