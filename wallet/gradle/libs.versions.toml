@@ -14,6 +14,7 @@ bouncycastle = "1.78.1"
 nimbusJose = "9.40"
 json = "20240303"
 junit5 = "5.10.3"
+jna = "5.14.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -42,6 +43,10 @@ bouncycastle = { group = "org.bouncycastle", name = "bcprov-jdk18on", version.re
 nimbus-jose-jwt = { group = "com.nimbusds", name = "nimbus-jose-jwt", version.ref = "nimbusJose" }
 json = { group = "org.json", name = "json", version.ref = "json" }
 junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junit5" }
+# JNA — the runtime the UniFFI-generated Kotlin bindings use to call libwallet_ffi.
+# The jar suits the JVM (:ssi tests); the Android app adds the @aar variant for the
+# bundled jnidispatch native lib.
+jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

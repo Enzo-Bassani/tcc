@@ -41,9 +41,28 @@ test-db: db-up
     TEST_DATABASE_URL={{db_url}} cargo test -p issuer_backend
     TEST_DATABASE_URL={{db_url}} cargo test -p relay --test fullstack
 
+# Build the host Rust native lib (libwallet_ffi) + generate the UniFFI Kotlin
+# bindings into :ssi. Needed before the :ssi JVM tests (RustSsiEngine + parity)
+# load the lib via JNA. No NDK, no emulator — runs on a plain host.
+wallet-ffi-host:
+    cargo build -p wallet-ffi
+    cargo run -q -p wallet-ffi --features cli --bin uniffi-bindgen -- generate \
+        --library target/debug/libwallet_ffi.so --language kotlin \
+        --out-dir wallet/ssi/src/main/kotlin --no-format
+
+# Cross-compile the per-ABI Android .so (arm64-v8a + x86_64) into the app's
+# jniLibs and regenerate the bindings. Requires the NDK + cargo-ndk + the rustup
+# Android targets (aarch64-linux-android, x86_64-linux-android). See wallet/README.md.
+wallet-ffi-android:
+    cargo ndk -t arm64-v8a -t x86_64 -o wallet/app/src/main/jniLibs \
+        build -p wallet-ffi --release
+    cargo run -q -p wallet-ffi --features cli --bin uniffi-bindgen -- generate \
+        --library target/aarch64-linux-android/release/libwallet_ffi.so \
+        --language kotlin --out-dir wallet/ssi/src/main/kotlin --no-format
+
 # --rerun-tasks because Gradle doesn't track the Rust oracle binary as an input (else UP-TO-DATE).
-# Kotlin wallet suite + Rust conformance oracle
-test-wallet:
+# Kotlin wallet suite + Rust conformance oracle (builds the host FFI lib first)
+test-wallet: wallet-ffi-host
     cd wallet && ./gradlew :ssi:test --rerun-tasks
 
 # Clippy across the workspace (kept warning-free)

@@ -21,25 +21,25 @@ uniffi::setup_scaffolding!();
 /// into [`WalletError::Engine`] with their full `{:#}` message preserved.
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum WalletError {
-    #[error("invalid input: {message}")]
-    InvalidInput { message: String },
-    #[error("{message}")]
-    Engine { message: String },
+    #[error("invalid input: {detail}")]
+    InvalidInput { detail: String },
+    #[error("{detail}")]
+    Engine { detail: String },
 }
 
 fn engine<T>(result: anyhow::Result<T>) -> Result<T, WalletError> {
-    result.map_err(|e| WalletError::Engine { message: format!("{e:#}") })
+    result.map_err(|e| WalletError::Engine { detail: format!("{e:#}") })
 }
 
 fn parse_json(label: &str, json: &str) -> Result<Value, WalletError> {
     serde_json::from_str(json).map_err(|e| WalletError::InvalidInput {
-        message: format!("{label} is not valid JSON: {e}"),
+        detail: format!("{label} is not valid JSON: {e}"),
     })
 }
 
 fn to_json<T: serde::Serialize>(value: &T) -> Result<String, WalletError> {
     serde_json::to_string(value).map_err(|e| WalletError::Engine {
-        message: format!("failed to serialize result: {e}"),
+        detail: format!("failed to serialize result: {e}"),
     })
 }
 
@@ -50,8 +50,8 @@ fn to_json<T: serde::Serialize>(value: &T) -> Result<String, WalletError> {
 /// An error a [`ForeignSigner`] may raise (e.g. the Keystore refused to sign).
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum SignerError {
-    #[error("signing failed: {message}")]
-    Failed { message: String },
+    #[error("signing failed: {detail}")]
+    Failed { detail: String },
 }
 
 /// The holder's signer, implemented by the wallet over its (non-exportable)
@@ -105,8 +105,8 @@ impl Signer for SignerAdapter {
 /// An error a [`ForeignFetcher`] may raise (network/HTTP failure).
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum FetchError {
-    #[error("fetch failed: {message}")]
-    Failed { message: String },
+    #[error("fetch failed: {detail}")]
+    Failed { detail: String },
 }
 
 /// A blocking HTTP GET the wallet implements — used only by [`credential_status`]
@@ -289,7 +289,7 @@ mod tests {
             Signer::alg(&self.0).to_string()
         }
         fn sign(&self, message: Vec<u8>) -> Result<Vec<u8>, SignerError> {
-            Signer::sign(&self.0, &message).map_err(|e| SignerError::Failed { message: e.to_string() })
+            Signer::sign(&self.0, &message).map_err(|e| SignerError::Failed { detail: e.to_string() })
         }
     }
 
@@ -361,7 +361,7 @@ mod tests {
         struct MapFetcherShim(ssi_core::resolve::MapFetcher);
         impl ForeignFetcher for MapFetcherShim {
             fn get(&self, url: String) -> Result<Vec<u8>, FetchError> {
-                Fetcher::get(&self.0, &url).map_err(|e| FetchError::Failed { message: e.to_string() })
+                Fetcher::get(&self.0, &url).map_err(|e| FetchError::Failed { detail: e.to_string() })
             }
         }
         let fetcher: Arc<dyn ForeignFetcher> = Arc::new(MapFetcherShim(demo.fetcher.clone()));
