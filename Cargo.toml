@@ -5,7 +5,7 @@ edition = "2024"
 
 [workspace]
 resolver = "2"
-members = ["crates/ssi-core", "crates/verifier-wasm", "crates/relay", "crates/wallet-core"]
+members = ["crates/ssi-core", "crates/verifier-wasm", "crates/relay", "crates/wallet-core", "crates/wallet-ffi"]
 
 # Single source of truth for deps shared by more than one workspace member, so a
 # version bump is one edit and feature sets can't silently diverge. `p256` carries

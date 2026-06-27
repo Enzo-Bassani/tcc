@@ -1,0 +1,34 @@
+[package]
+name = "wallet-ffi"
+version = "0.1.0"
+edition = "2024"
+description = "UniFFI facade over ssi-core's holder engine, for the Kotlin/Android wallet."
+
+[lib]
+# `cdylib` is the native library the Android app loads (and the host dylib the JVM
+# tests load); `lib` lets the bindgen bin and unit tests link the crate normally.
+crate-type = ["cdylib", "lib"]
+name = "wallet_ffi"
+
+# The bindings generator. Built only with `--features cli` (so the Android cdylib
+# build stays lean): `cargo run -p wallet-ffi --features cli --bin uniffi-bindgen`.
+[[bin]]
+name = "uniffi-bindgen"
+required-features = ["cli"]
+
+[features]
+cli = ["uniffi/cli"]
+
+[dependencies]
+ssi-core = { path = "../ssi-core", features = ["wallet-sim"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = "2"
+uniffi = "0.29"
+
+[dev-dependencies]
+# Enable testkit on ssi-core for the round-trip test (mint a demo credential and
+# verify the FFI-built response with the real verifier). Feature-unified into the
+# test build only.
+ssi-core = { path = "../ssi-core", features = ["wallet-sim", "testkit"] }
