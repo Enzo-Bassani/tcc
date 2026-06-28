@@ -27,7 +27,7 @@ class Oid4vciAuthCodeTest {
 
     /** A no-op engine: the credential tail only needs a proof string back, and the
      *  trust checks are disabled (the stub serves a placeholder SD-JWT, not a real
-     *  x5c-signed credential — that path is covered by IssuerTrustTest/SignedMetadataTest). */
+     *  x5c-signed credential — that path is covered by ssi-core's issuer_trust tests). */
     private val stubEngine = object : SsiEngine {
         override fun buildVciProof(credentialIssuer: String, cNonce: String, holder: HolderKey): String =
             "proof.$cNonce"
@@ -157,7 +157,7 @@ class Oid4vciAuthCodeTest {
         val stub = IssuerStub()
         try {
             // Disable issuer-credential validation: the stub serves a placeholder SD-JWT, not a
-            // real x5c-signed credential (that path is covered by IssuerTrustTest).
+            // real x5c-signed credential (that path is covered by ssi-core's issuer_trust tests).
             val client = Oid4vciClient(engine = stubEngine)
             val pending = client.prepareAuthorization(offer(stub.base), "com.tcc.wallet://oid4vci")
             // RFC 9207: the returned `iss` matches the expected issuer.

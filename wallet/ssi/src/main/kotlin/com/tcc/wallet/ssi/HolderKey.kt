@@ -19,9 +19,9 @@ import java.security.spec.ECGenParameterSpec
  * the credential's `cnf.jwk` at issuance; every presentation's
  * key-binding JWT (and the OID4VCI key proof) is signed with the private half.
  *
- * This is the **seam** between key material and the protocol: callers ([KotlinSsiEngine],
- * [Jws.signEs256], the OID4VCI/OID4VP clients) only ever need [sign] and [publicJwk], so
- * the backing is swappable. Two implementations exist:
+ * This is the **seam** between key material and the protocol: callers (the
+ * [RustSsiEngine] via [KotlinHolderSigner], the OID4VCI/OID4VP clients) only ever
+ * need [sign] and [publicJwk], so the backing is swappable. Two implementations exist:
  *
  *  - [SoftwareHolderKey] — BouncyCastle, scalar in memory. Used by the conformance test
  *    and anywhere that must run on a plain JDK (the `:ssi` module has no Android SDK).

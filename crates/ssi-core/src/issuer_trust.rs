@@ -161,4 +161,33 @@ mod tests {
             CredentialStatus::Revoked,
         );
     }
+
+    #[test]
+    fn verifies_signed_issuer_metadata_and_rejects_wrong_issuer_or_tampering() {
+        use crate::x509::{Cert, demo};
+        use p256::ecdsa::SigningKey;
+        use p256::pkcs8::DecodePrivateKey;
+        use serde_json::json;
+
+        // Sign issuer metadata with the demo leaf key, carrying the leaf+intermediate x5c.
+        let leaf_key = SigningKey::from_pkcs8_pem(demo::UFSC_LEAF_KEY_PKCS8_PEM).unwrap();
+        let x5c = json!([
+            crypto::b64std(Cert::from_pem(demo::UFSC_LEAF_PEM).unwrap().der()),
+            crypto::b64std(Cert::from_pem(demo::MEC_INTERMEDIATE_PEM).unwrap().der()),
+        ]);
+        let issuer = "https://diploma.ufsc.br"; // a SAN of the demo leaf
+        let header = json!({ "alg": "ES256", "typ": "openid-credential-issuer+jwt", "x5c": x5c });
+        let jwt = crypto::sign_jws_es256(&header, &json!({ "iss": issuer, "sub": issuer }), &leaf_key);
+
+        // Happy path: trusted chain + iss bound to the leaf + sub == the issuer we expect.
+        let claims = verify_signed_metadata(&jwt, issuer, &anchors(), NOW).unwrap();
+        assert_eq!(claims["sub"], issuer);
+
+        // A document authenticating a different issuer than the one we're talking to is rejected.
+        assert!(verify_signed_metadata(&jwt, "https://evil.example", &anchors(), NOW).is_err());
+
+        // A tampered signature is rejected.
+        let tampered = format!("{}x", &jwt[..jwt.len() - 1]);
+        assert!(verify_signed_metadata(&tampered, issuer, &anchors(), NOW).is_err());
+    }
 }

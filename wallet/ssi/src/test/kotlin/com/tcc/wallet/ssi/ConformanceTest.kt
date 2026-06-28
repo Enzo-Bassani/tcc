@@ -9,7 +9,7 @@ import java.io.File
 
 /**
  * The compatibility guard: the Authorization Response built by
- * [KotlinSsiEngine] — verifying the verifier's signed request (did:jwk JAR), then
+ * [RustSsiEngine] (UniFFI over ssi-core) — verifying the verifier's signed request (did:jwk JAR), then
  * JWE-encrypting the VP Token (`direct_post.jwt`) — must make the REAL verifier
  * (`ssi_core::oid4vp`) report `valid == true`. This exercises BOTH cross-language
  * surfaces at once: Kotlin verifies a Rust-signed JAR, and Rust decrypts a
@@ -27,6 +27,7 @@ class ConformanceTest {
     @Test
     fun `verifier accepts the Kotlin-built encrypted response`() {
         assumeTrue(cargoAvailable(), "cargo not on PATH — skipping cross-language conformance")
+        assumeTrue(ffiLibAvailable(), "libwallet_ffi not built — run `just wallet-ffi-host`")
         val work = freshTempDir()
         val holder = SoftwareHolderKey.generate()
 
@@ -43,6 +44,7 @@ class ConformanceTest {
     @Test
     fun `verifier rejects a revoked credential`() {
         assumeTrue(cargoAvailable(), "cargo not on PATH — skipping cross-language conformance")
+        assumeTrue(ffiLibAvailable(), "libwallet_ffi not built — run `just wallet-ffi-host`")
         val work = freshTempDir()
         val holder = SoftwareHolderKey.generate()
 
@@ -58,12 +60,20 @@ class ConformanceTest {
 
     /** The wallet half of the flow: verify the bundle's signed request (did:jwk JAR),
      *  build the VP Token, and seal it as the encrypted Authorization Response. */
+    private val engine = RustSsiEngine()
+
     private fun respond(bundle: JSONObject, holder: HolderKey): JSONObject {
-        val request = Jar.verifyRequest(bundle.getString("request_jwt"), bundle.getString("client_id"))
-        return KotlinSsiEngine().createResponse(
+        val request = engine.verifyRequest(bundle.getString("request_jwt"), bundle.getString("client_id"))
+        return engine.createResponse(
             request,
             listOf(StoredCredential(bundle.getString("sd_jwt"), holder)),
         )
+    }
+
+    /** The host-built native lib must be on `jna.library.path` (set by the :ssi test task). */
+    private fun ffiLibAvailable(): Boolean {
+        val dir = System.getProperty("wallet.ffi.libdir") ?: return false
+        return File(dir, System.mapLibraryName("wallet_ffi")).exists()
     }
 
     private fun mint(holder: HolderKey, revoked: Boolean, work: File): JSONObject {

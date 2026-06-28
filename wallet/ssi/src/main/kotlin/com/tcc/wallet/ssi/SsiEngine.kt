@@ -31,12 +31,11 @@ data class MatchedCredential(
 data class QueryMatch(val queryId: String, val vct: String?, val matches: List<MatchedCredential>)
 
 /**
- * The holder's SSI operations, behind an interface so the implementation can be
- * swapped without touching the app (the "Hybrid" strategy):
- *
- * - [KotlinSsiEngine] — the Phase-1 pure-Kotlin implementation (here).
- * - a future `RustSsiEngine` — Phase 2, calling `ssi-core` over UniFFI for exact
- *   parity. The same conformance oracle (`crates/wallet-core`) guards both.
+ * The holder's SSI operations, behind an interface that the app depends on. The
+ * sole implementation is [RustSsiEngine], which calls the shared `ssi-core` engine
+ * over UniFFI so the wallet runs byte-for-byte the same SD-JWT / JWS / JWE / DCQL /
+ * x5c logic as the issuer and verifier. The `crates/wallet-core` conformance oracle
+ * guards its wire-format compatibility ([ConformanceTest]).
  *
  * Everything here is framework-agnostic: no Android, no HTTP, no storage — those
  * live in the `:app` module and the `net` package.
