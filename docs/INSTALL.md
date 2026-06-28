@@ -10,8 +10,9 @@ There are two tiers:
 
 1. **Backend + Rust tests** — issuer, browser verifier, relay, and the whole Rust
    suite. This is all you need for `just deploy` and `just test`'s Rust half.
-2. **Wallet** — the Kotlin/Android holder, which additionally needs a JDK and the
-   Android SDK.
+2. **Wallet** — the Kotlin/Android holder, which additionally needs a JDK, the
+   Android SDK, and (since its engine is the Rust `ssi-core` cross-compiled for the
+   phone) the NDK + `cargo-ndk`.
 
 ---
 
@@ -76,15 +77,19 @@ just teardown               # stops them again
 
 ## 2. Wallet (Kotlin/Android)
 
-Only needed to build and run the mobile holder. The pure-Kotlin SSI engine and its
-tests build with **just a JDK** — you can run `just test-wallet` without the full
-Android stack.
+Only needed to build and run the mobile holder. The wallet's engine is the Rust
+`ssi-core` reached over UniFFI, so the Kotlin `:ssi` layer and its tests build with a
+**JDK + `cargo`** (to build the host FFI library) — you can run `just test-wallet`
+without the full Android stack. Building the **APK** additionally needs the NDK and
+`cargo-ndk` to cross-compile the native library.
 
 | Tool | Why | Install (Arch) |
 |------|-----|----------------|
+| **Rust + `cargo`** | The wallet engine is Rust: builds the host `libwallet_ffi` for the JVM tests and, cross-compiled, the on-device library. | see tier 1 above |
 | **JDK 17** | Kotlin compiles to JVM bytecode; the Android build needs it. | `pacman -S jdk17-openjdk` |
 | **Android Studio** | IDE bundling the SDK manager, emulator, and Gradle. | AUR `android-studio`, JetBrains Toolbox, or the official tarball |
 | **Android SDK 34 + Platform-Tools + an emulator image** | Compile and run the APK. | First launch of Android Studio → SDK Manager |
+| **NDK + `cargo-ndk` + rustup Android targets** | Cross-compile `libwallet_ffi.so` for the APK (arm64 + x86_64). Not needed for the host JVM tests. | NDK via SDK Manager; `cargo install cargo-ndk`; `rustup target add aarch64-linux-android x86_64-linux-android` |
 
 Once Android Studio is installed, **open the `wallet/` folder** — it syncs Gradle and
 creates the Gradle wrapper automatically. From the CLI you can instead install Gradle
@@ -92,12 +97,12 @@ creates the Gradle wrapper automatically. From the CLI you can instead install G
 `adb` and `emulator` are on your `PATH` for the `just wallet` / `just emulator`
 recipes.
 
-Full details — including how to run the conformance oracle with only a JDK — are in
+Full details — including how the conformance oracle loads the host FFI library — are in
 [`../wallet/README.md`](../wallet/README.md).
 
 ### Verify
 
 ```sh
-just test-wallet            # Kotlin suite + cross-language conformance oracle (JDK only)
-just wallet                 # build + install + launch on an emulator (needs the SDK)
+just test-wallet            # host FFI lib + Kotlin suite + conformance oracle (JDK + cargo)
+just wallet                 # build + install + launch on an emulator (needs SDK + NDK)
 ```

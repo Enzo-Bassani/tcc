@@ -38,8 +38,8 @@ androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycl
 androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
 mlkit-barcode-scanning = { group = "com.google.mlkit", name = "barcode-scanning", version.ref = "mlkitBarcode" }
 bouncycastle = { group = "org.bouncycastle", name = "bcprov-jdk18on", version.ref = "bouncycastle" }
-# Nimbus JOSE+JWT — the OID4VP response JWE (ECDH-ES + A128GCM/A256GCM, Concat KDF). Replaces the
-# hand-rolled Jwe.kt; stays wire-compatible with the Rust `ssi_core::jwe` (guarded by the oracle).
+# Nimbus JOSE+JWT — now only its ES256 DER↔R‖S signature transcode (Ec.kt). JWE/JAR/SD-JWT moved
+# to the Rust ssi-core engine (wallet-ffi over UniFFI); this is the last bit of JOSE left in Kotlin.
 nimbus-jose-jwt = { group = "com.nimbusds", name = "nimbus-jose-jwt", version.ref = "nimbusJose" }
 json = { group = "org.json", name = "json", version.ref = "json" }
 junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junit5" }

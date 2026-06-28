@@ -13,9 +13,9 @@ import java.security.interfaces.ECPublicKey
  * like a software-signed one.
  *
  * The DER↔JOSE signature transcoding is delegated to **Nimbus JOSE+JWT**
- * (`com.nimbusds.jose.crypto.impl.ECDSA`, already a dependency for [Jwe]), so this module
- * does not hand-roll ASN.1. JAR signature *verification* likewise goes through Nimbus —
- * see [Jar].
+ * (`com.nimbusds.jose.crypto.impl.ECDSA`), so this module does not hand-roll ASN.1. This is
+ * the only JOSE work left in Kotlin — JWS/JWE/JAR/SD-JWT all run in Rust `ssi-core` over the
+ * UniFFI [RustSsiEngine]; the wallet just frames the signing input and signs the digest here.
  */
 object Ec {
 

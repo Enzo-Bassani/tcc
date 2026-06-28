@@ -1,8 +1,8 @@
 //! Proves the conformance oracle itself is correct, end to end, in Rust — before
 //! any Kotlin exists. `wallet_sim` plays the (known-good) wallet: mint a bundle,
 //! let the simulated holder build a VP Token from its `request`, then verify it.
-//! When the real Kotlin wallet is wired up, its JVM test does the same loop but
-//! with the Kotlin engine producing the VP Token.
+//! The Kotlin wallet's `ConformanceTest` runs the same loop, but driving the
+//! `wallet-ffi` UniFFI engine (the same `wallet_sim` code) to produce the VP Token.
 
 use ssi_core::holder::HolderKey;
 use ssi_core::oid4vp::{self, Check};

@@ -1,8 +1,10 @@
 //! # wallet-core — the wallet conformance oracle
 //!
-//! The real wallet is a separate Kotlin/Android app. Its SSI logic is
-//! reimplemented in pure Kotlin, so the one thing that could drift from this repo
-//! is **wire-format compatibility**. This crate is the guard against that drift.
+//! The real wallet is a separate Kotlin/Android app. It runs this repo's
+//! `ssi-core` engine over UniFFI (`crates/wallet-ffi`) rather than a port, so what
+//! could drift is no longer the crypto but the **FFI boundary and the Kotlin app
+//! shell** (request-verify → VP-build → JWE-seal). This crate is the guard: a
+//! black-box wallet that builds an accepted presentation is wired up correctly.
 //!
 //! It exposes the same engine the verifier uses (`ssi_core::oid4vp`) as two steps
 //! a black-box wallet can be tested around:

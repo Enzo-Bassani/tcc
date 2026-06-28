@@ -10,8 +10,9 @@ Há dois níveis:
 
 1. **Backend + testes Rust** — emissor, verificador em navegador, relay e toda a suíte Rust.
    É tudo o que você precisa para o `just deploy` e para a metade Rust do `just test`.
-2. **Carteira** — o titular em Kotlin/Android, que adicionalmente precisa de um JDK e do
-   Android SDK.
+2. **Carteira** — o titular em Kotlin/Android, que adicionalmente precisa de um JDK, do
+   Android SDK e (já que seu motor é o `ssi-core` em Rust compilado para o celular) do
+   NDK + `cargo-ndk`.
 
 ---
 
@@ -76,27 +77,31 @@ just teardown               # os encerra novamente
 
 ## 2. Carteira (Kotlin/Android)
 
-Necessária apenas para compilar e executar o titular móvel. O motor SSI em Kotlin puro e seus
-testes compilam **apenas com um JDK** — você pode rodar `just test-wallet` sem a stack Android
-completa.
+Necessária apenas para compilar e executar o titular móvel. O motor da carteira é o `ssi-core`
+em Rust alcançado via UniFFI, então a camada Kotlin `:ssi` e seus testes compilam com
+**JDK + `cargo`** (para compilar a biblioteca FFI do host) — você pode rodar `just test-wallet`
+sem a stack Android completa. Compilar o **APK** precisa adicionalmente do NDK e do `cargo-ndk`
+para compilar a biblioteca nativa.
 
 | Ferramenta | Por quê | Instalar (Arch) |
 |------|-----|----------------|
+| **Rust + `cargo`** | O motor da carteira é Rust: compila a `libwallet_ffi` do host para os testes na JVM e, compilada, a biblioteca no dispositivo. | veja o nível 1 acima |
 | **JDK 17** | O Kotlin compila para bytecode da JVM; a build Android precisa dele. | `pacman -S jdk17-openjdk` |
 | **Android Studio** | IDE que embute o gerenciador de SDK, o emulador e o Gradle. | AUR `android-studio`, JetBrains Toolbox ou o tarball oficial |
 | **Android SDK 34 + Platform-Tools + uma imagem de emulador** | Compilar e executar o APK. | Primeira execução do Android Studio → SDK Manager |
+| **NDK + `cargo-ndk` + alvos Android do rustup** | Compilar `libwallet_ffi.so` para o APK (arm64 + x86_64). Não é necessário para os testes na JVM do host. | NDK via SDK Manager; `cargo install cargo-ndk`; `rustup target add aarch64-linux-android x86_64-linux-android` |
 
 Uma vez instalado o Android Studio, **abra a pasta `wallet/`** — ele sincroniza o Gradle e cria
 o Gradle wrapper automaticamente. Pela CLI, você pode em vez disso instalar o Gradle
 (`pacman -S gradle`) e rodar `gradle wrapper` uma vez para gerar o `./gradlew`. Garanta que
 `adb` e `emulator` estejam no seu `PATH` para as receitas `just wallet` / `just emulator`.
 
-Os detalhes completos — incluindo como rodar o oráculo de conformidade apenas com um JDK — estão
-em [`../wallet/README.md`](../wallet/README.pt-BR.md).
+Os detalhes completos — incluindo como o oráculo de conformidade carrega a biblioteca FFI do
+host — estão em [`../wallet/README.md`](../wallet/README.pt-BR.md).
 
 ### Verificar
 
 ```sh
-just test-wallet            # suíte Kotlin + oráculo de conformidade entre linguagens (só JDK)
-just wallet                 # compila + instala + executa em um emulador (precisa do SDK)
+just test-wallet            # lib FFI do host + suíte Kotlin + oráculo de conformidade (JDK + cargo)
+just wallet                 # compila + instala + executa em um emulador (precisa de SDK + NDK)
 ```

@@ -9,18 +9,19 @@ standards: diplomas are minted as **SD-JWT VCs** over **OID4VCI**, held in a mob
 wallet, and presented over **OID4VP 1.0** with selective disclosure.
 
 The cryptographic engine is written once in Rust (`ssi-core`) and reused everywhere —
-natively on the issuer, compiled to **WebAssembly** in the browser verifier, and
-re-implemented in Kotlin for the wallet, with a conformance oracle proving the two
-ports are byte-compatible.
+natively on the issuer, compiled to **WebAssembly** in the browser verifier, and loaded
+on **Android** through a UniFFI facade in the wallet. Because all three run the very same
+code, byte-compatibility is by construction; a conformance oracle guards the wallet's FFI
+boundary rather than a second implementation.
 
 ## Components
 
 | Component | Where | What it is |
 |-----------|-------|------------|
 | **Issuer** | `src/`, root crate `issuer_backend` | Issues diplomas as SD-JWT VCs over **OID4VCI**, with a `did:web` identity and IETF Token Status List revocation (axum + sqlx + PostgreSQL). |
-| **`ssi-core`** | `crates/ssi-core` | The shared SSI engine — JWS (EdDSA + ES256), SD-JWT, DCQL, OID4VP, status lists, `did:web`. Native **and** WebAssembly. |
+| **`ssi-core`** | `crates/ssi-core` | The shared SSI engine — JWS (EdDSA + ES256), SD-JWT, DCQL, OID4VP, status lists, `did:web`. Runs natively, as **WebAssembly** (the verifier), and on **Android** via the `crates/wallet-ffi` UniFFI facade (the wallet). |
 | **Verifier** | `crates/verifier-wasm` + `web/` | A universal **OID4VP 1.0** verifier whose crypto runs **entirely in the browser** (WASM), bridged to wallets by a dumb transport relay (`crates/relay`). |
-| **Wallet** | `wallet/` (Kotlin/Android) | The **holder**: receives credentials over OID4VCI, stores them, and presents them over OID4VP. Its engine is a pure-Kotlin port of `ssi-core`, proven byte-compatible by the oracle in `crates/wallet-core`. See [`wallet/README.md`](wallet/README.md). |
+| **Wallet** | `wallet/` (Kotlin/Android) | The **holder**: receives credentials over OID4VCI, stores them, and presents them over OID4VP. It runs the shared `ssi-core` engine directly through the `crates/wallet-ffi` UniFFI facade — no Kotlin crypto reimplementation; the oracle in `crates/wallet-core` exercises the FFI boundary. See [`wallet/README.md`](wallet/README.md). |
 
 ## Dependencies
 
@@ -33,8 +34,10 @@ To build and run the backend (issuer + verifier + relay) and the Rust test suite
 - *Optional:* `qrencode` (terminal QR codes for offers), `curl`, `python3`, a browser
 
 To build and run the **wallet** you additionally need a **JDK 17** and the **Android
-SDK** (+ an emulator). The pure-Kotlin engine and its tests run with **only a JDK** —
-no Android stack required.
+SDK** (+ an emulator), and — because the wallet's engine is the Rust `ssi-core`
+cross-compiled for the phone — the **NDK**, `cargo-ndk`, and the rustup Android targets.
+The Kotlin `:ssi` layer and its tests run with just a **JDK + `cargo`** (to build the
+host FFI library) — no Android stack required.
 
 > **Setup instructions for all of the above are in [`docs/INSTALL.md`](docs/INSTALL.md).**
 
@@ -74,17 +77,17 @@ just test          # Rust workspace + DB-backed issuer tests + clippy + Kotlin c
 ```
 
 This is the canonical "did I break anything?" check: it starts Postgres, sets
-`TEST_DATABASE_URL`, runs the full Rust suite and clippy, and re-runs the Kotlin
-conformance oracle.
+`TEST_DATABASE_URL`, runs the full Rust suite and clippy, builds the host FFI library
+(`wallet-ffi-host`), and re-runs the Kotlin conformance oracle.
 
 Scope to a single area with the underlying recipes (`just --list`):
 
 | Recipe | Database? | Covers |
 |--------|-----------|--------|
-| `just test-rust` | no | Whole Rust workspace: engine units, full issue→present→validate (EdDSA + ES256), revoked / replay / tamper failure modes, verifier-over-relay E2E, issuer↔verifier interop. |
+| `just test-rust` | no | Whole Rust workspace: engine units, full issue→present→validate (EdDSA + ES256), revoked / replay / tamper failure modes, verifier-over-relay E2E, issuer↔verifier interop, and the wallet's UniFFI round-trip (`cargo test -p wallet-ffi`). |
 | `just test-db` | **yes** | Issuer OID4VCI integration (pre-authorized + auth-code flows → token → credential → verify → revoke) and the full-stack HTTP E2E. Skips cleanly without `TEST_DATABASE_URL`. |
 | `just clippy` | no | Lint across the workspace (kept warning-free). |
-| `just test-wallet` | no | Kotlin wallet suite + the cross-language conformance oracle. |
+| `just test-wallet` | no | Builds the host FFI lib, then runs the Kotlin wallet suite + the cross-language conformance oracle over the UniFFI engine. |
 
 ### Narrated protocol walkthroughs
 
