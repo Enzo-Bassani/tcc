@@ -1,6 +1,5 @@
 package com.tcc.wallet.ssi.net
 
-import com.tcc.wallet.ssi.Jar
 import com.tcc.wallet.ssi.SsiEngine
 import com.tcc.wallet.ssi.StoredCredential
 import org.json.JSONObject
@@ -59,7 +58,7 @@ class Oid4vpPresenter(
         val requestJwt = scanned.requestJwt
             ?: scanned.requestUri?.let { http.getJson(it).getString("request") }
             ?: error("QR has neither request nor request_uri")
-        return Jar.verifyRequest(requestJwt, scanned.clientId)
+        return engine.verifyRequest(requestJwt, scanned.clientId)
     }
 
     /**

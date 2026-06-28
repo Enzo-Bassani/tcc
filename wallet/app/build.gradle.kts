@@ -14,6 +14,7 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "0.1"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -43,6 +44,10 @@ android {
 
 dependencies {
     implementation(project(":ssi"))
+    // JNA's Android runtime: the @aar variant bundles libjnidispatch.so for the
+    // Android ABIs (the plain jar :ssi uses only carries desktop builds), so the
+    // UniFFI bindings can load libwallet_ffi on-device. Version pinned in the catalog.
+    implementation("net.java.dev.jna:jna:${libs.versions.jna.get()}@aar")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -66,4 +71,8 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
     implementation(libs.mlkit.barcode.scanning)
+
+    // Tier-3 on-device test: the UniFFI engine + AndroidKeyStore signer on an emulator.
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
 }

@@ -25,7 +25,9 @@ import java.nio.charset.StandardCharsets
  */
 class Oid4vciAuthCodeTest {
 
-    /** A no-op engine: the credential tail only needs a proof string back. */
+    /** A no-op engine: the credential tail only needs a proof string back, and the
+     *  trust checks are disabled (the stub serves a placeholder SD-JWT, not a real
+     *  x5c-signed credential — that path is covered by IssuerTrustTest/SignedMetadataTest). */
     private val stubEngine = object : SsiEngine {
         override fun buildVciProof(credentialIssuer: String, cNonce: String, holder: HolderKey): String =
             "proof.$cNonce"
@@ -33,6 +35,9 @@ class Oid4vciAuthCodeTest {
         override fun createResponse(request: JSONObject, credentials: List<StoredCredential>, selection: Map<String, Int>) = JSONObject()
         override fun findMatches(request: JSONObject, credentials: List<StoredCredential>) = emptyList<QueryMatch>()
         override fun readCredential(sdJwt: String) = JSONObject()
+        override fun verifyRequest(requestJwt: String, clientId: String) = JSONObject()
+        override fun verifyIssuerCredential(sdJwt: String) {}
+        override fun verifySignedMetadata(signedMetadata: String, expectedIssuer: String) = JSONObject()
     }
 
     private val holder: HolderKey = SoftwareHolderKey.generate()
@@ -112,7 +117,7 @@ class Oid4vciAuthCodeTest {
     fun `prepareAuthorization emits a valid PKCE S256 authorize URL`() {
         val stub = IssuerStub()
         try {
-            val pending = Oid4vciClient().prepareAuthorization(offer(stub.base), "com.tcc.wallet://oid4vci")
+            val pending = Oid4vciClient(engine = stubEngine).prepareAuthorization(offer(stub.base), "com.tcc.wallet://oid4vci")
             val q = queryOf(pending.authorizationUrl)
 
             assertTrue(pending.authorizationUrl.startsWith("${stub.base}/authorize?"))
@@ -138,8 +143,8 @@ class Oid4vciAuthCodeTest {
     fun `each prepareAuthorization uses a fresh verifier and state`() {
         val stub = IssuerStub()
         try {
-            val a = Oid4vciClient().prepareAuthorization(offer(stub.base), "com.tcc.wallet://oid4vci")
-            val b = Oid4vciClient().prepareAuthorization(offer(stub.base), "com.tcc.wallet://oid4vci")
+            val a = Oid4vciClient(engine = stubEngine).prepareAuthorization(offer(stub.base), "com.tcc.wallet://oid4vci")
+            val b = Oid4vciClient(engine = stubEngine).prepareAuthorization(offer(stub.base), "com.tcc.wallet://oid4vci")
             assertNotEquals(a.codeVerifier, b.codeVerifier)
             assertNotEquals(a.state, b.state)
         } finally {
@@ -153,10 +158,10 @@ class Oid4vciAuthCodeTest {
         try {
             // Disable issuer-credential validation: the stub serves a placeholder SD-JWT, not a
             // real x5c-signed credential (that path is covered by IssuerTrustTest).
-            val client = Oid4vciClient(issuerTrust = IssuerTrust.disabled())
+            val client = Oid4vciClient(engine = stubEngine)
             val pending = client.prepareAuthorization(offer(stub.base), "com.tcc.wallet://oid4vci")
             // RFC 9207: the returned `iss` matches the expected issuer.
-            val sdJwt = client.completeAuthorization(pending, "auth-code-abc", stub.base, holder, stubEngine)
+            val sdJwt = client.completeAuthorization(pending, "auth-code-abc", stub.base, holder)
 
             assertEquals(stub.sdJwt, sdJwt)
             assertEquals("authorization_code", stub.tokenForm["grant_type"])
@@ -171,16 +176,16 @@ class Oid4vciAuthCodeTest {
     fun `completeAuthorization rejects a mismatched or missing iss (RFC 9207)`() {
         val stub = IssuerStub()
         try {
-            val client = Oid4vciClient(issuerTrust = IssuerTrust.disabled())
+            val client = Oid4vciClient(engine = stubEngine)
             val pending = client.prepareAuthorization(offer(stub.base), "com.tcc.wallet://oid4vci")
 
             // Wrong issuer identifier → rejected before any token exchange.
             assertThrows(IllegalArgumentException::class.java) {
-                client.completeAuthorization(pending, "auth-code-abc", "https://evil.example", holder, stubEngine)
+                client.completeAuthorization(pending, "auth-code-abc", "https://evil.example", holder)
             }
             // Missing `iss` is likewise rejected (the AS MUST send it).
             assertThrows(IllegalArgumentException::class.java) {
-                client.completeAuthorization(pending, "auth-code-abc", null, holder, stubEngine)
+                client.completeAuthorization(pending, "auth-code-abc", null, holder)
             }
         } finally {
             stub.stop()

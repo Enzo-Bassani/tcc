@@ -2,7 +2,6 @@ package com.tcc.wallet.ssi.net
 
 import com.tcc.wallet.ssi.Bytes
 import com.tcc.wallet.ssi.HolderKey
-import com.tcc.wallet.ssi.IssuerTrust
 import com.tcc.wallet.ssi.SsiEngine
 import org.json.JSONArray
 import org.json.JSONObject
@@ -24,13 +23,15 @@ import java.security.SecureRandom
  * No `tx_code`, and `invalid_nonce` triggers one fresh-nonce retry — shared by
  * both flows via [fetchCredential].
  *
- * On receipt the issuer credential is **validated** ([IssuerTrust]) before it is
- * returned to be stored: HAIP §6.1.1 `x5c` resolution + chain validation to a
- * trusted root + `iss`↔leaf binding. An invalid credential is rejected, never stored.
+ * On receipt the issuer credential is **validated** by the [engine]
+ * ([SsiEngine.verifyIssuerCredential]) before it is returned to be stored: HAIP
+ * §6.1.1 `x5c` resolution + chain validation to a trusted root + `iss`↔leaf binding.
+ * An invalid credential is rejected, never stored. The same [engine] authenticates
+ * signed issuer metadata and builds the holder-binding proof.
  */
 class Oid4vciClient(
     private val http: Http = Http(),
-    private val issuerTrust: IssuerTrust = IssuerTrust.default(),
+    private val engine: SsiEngine,
 ) {
 
     /** Which OID4VCI grant a resolved offer asks the wallet to run. */
@@ -55,7 +56,7 @@ class Oid4vciClient(
     )
 
     /** Run the pre-authorized flow for a resolved Credential Offer and return the SD-JWT VC. */
-    fun receive(offer: JSONObject, holder: HolderKey, engine: SsiEngine): String {
+    fun receive(offer: JSONObject, holder: HolderKey): String {
         val issuer = offer.getString("credential_issuer")
         val configId = offer.getJSONArray("credential_configuration_ids").getString(0)
         val preAuthCode = offer.getJSONObject("grants")
@@ -70,7 +71,7 @@ class Oid4vciClient(
             mapOf("grant_type" to PRE_AUTH_GRANT, "pre-authorized_code" to preAuthCode),
         ).json().getString("access_token")
 
-        return fetchCredential(issuer, configId, meta.credentialEndpoint, meta.nonceEndpoint, token, holder, engine)
+        return fetchCredential(issuer, configId, meta.credentialEndpoint, meta.nonceEndpoint, token, holder)
     }
 
     /**
@@ -137,7 +138,6 @@ class Oid4vciClient(
         code: String,
         iss: String?,
         holder: HolderKey,
-        engine: SsiEngine,
     ): String {
         // RFC 9207 (HAIP §4): the authorization server MUST return its issuer
         // identifier as `iss` in the authorization response. Verify it matches the
@@ -157,7 +157,7 @@ class Oid4vciClient(
 
         return fetchCredential(
             pending.credentialIssuer, pending.configId,
-            pending.credentialEndpoint, pending.nonceEndpoint, token, holder, engine,
+            pending.credentialEndpoint, pending.nonceEndpoint, token, holder,
         )
     }
 
@@ -178,7 +178,7 @@ class Oid4vciClient(
         // iss↔leaf binding) and binding it to the credential_issuer we are talking to. Reject a
         // forged/wrong-issuer document — never proceed with unauthenticated issuer metadata.
         issuerMeta.optString("signed_metadata").takeIf { it.isNotBlank() }?.let { signed ->
-            issuerTrust.verifySignedMetadata(signed, issuer)
+            engine.verifySignedMetadata(signed, issuer)
         }
         val asMeta = http.getJson("$issuer/.well-known/oauth-authorization-server")
         return Discovery(
@@ -197,7 +197,6 @@ class Oid4vciClient(
         nonceEndpoint: String,
         token: String,
         holder: HolderKey,
-        engine: SsiEngine,
     ): String {
         var lastError = ""
         repeat(2) {
@@ -211,7 +210,7 @@ class Oid4vciClient(
             if (resp.ok) {
                 val credential = resp.json().getJSONArray("credentials").getJSONObject(0).getString("credential")
                 // HAIP x5c validation at receipt: reject (never store) an untrustworthy credential.
-                issuerTrust.verifyCredential(credential)
+                engine.verifyIssuerCredential(credential)
                 return credential
             }
             lastError = resp.body

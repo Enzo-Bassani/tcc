@@ -71,4 +71,18 @@ interface SsiEngine {
 
     /** The full (all-disclosures-applied) claim set of a stored SD-JWT, for display. */
     fun readCredential(sdJwt: String): JSONObject
+
+    /** Verify a signed OID4VP Authorization Request (did:jwk JAR) against the QR's
+     *  [clientId] trust anchor, returning the authenticated request claims. Throws
+     *  if the signature or `client_id` is wrong. */
+    fun verifyRequest(requestJwt: String, clientId: String): JSONObject
+
+    /** Validate a received SD-JWT VC's issuer under HAIP §6.1.1 (`x5c` chain → a
+     *  trusted anchor, ES256 signature under the leaf, `iss`↔leaf binding) before it
+     *  is accepted/stored. Throws if the issuer credential is not trustworthy. */
+    fun verifyIssuerCredential(sdJwt: String)
+
+    /** Verify signed Credential Issuer Metadata (OID4VCI §11.2.3) bound to
+     *  [expectedIssuer], returning its verified claims. Throws on any failure. */
+    fun verifySignedMetadata(signedMetadata: String, expectedIssuer: String): JSONObject
 }

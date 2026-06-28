@@ -10,8 +10,13 @@ dependencies {
     implementation(libs.bouncycastle)    // SoftwareHolderKey curve ops only (gen + fromScalar's d·G); JVM/conformance — Android uses KeystoreHolderKey
     implementation(libs.nimbus.jose.jwt) // JOSE: response JWE (Jwe.kt), DER↔R‖S transcode (Ec), JAR verify (Jar)
     implementation(libs.json)            // org.json — also provided by the Android platform at runtime
-    implementation(libs.jna)             // UniFFI bindings runtime (loads libwallet_ffi via JNA)
+    // JNA for the UniFFI bindings. compileOnly so the plain jar is NOT exposed
+    // transitively to :app (which supplies the @aar variant — same classes + the
+    // Android jnidispatch — and would otherwise clash). The host JVM tests need it
+    // on the runtime classpath, hence testImplementation.
+    compileOnly(libs.jna)
     testImplementation(libs.junit.jupiter)
+    testImplementation(libs.jna)
 }
 
 kotlin {

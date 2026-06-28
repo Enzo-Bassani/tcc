@@ -84,6 +84,17 @@ class KotlinSsiEngine : SsiEngine {
         return SdJwt.reconstruct(payload, disclosures)
     }
 
+    override fun verifyRequest(requestJwt: String, clientId: String): JSONObject =
+        Jar.verifyRequest(requestJwt, clientId)
+
+    override fun verifyIssuerCredential(sdJwt: String) = issuerTrust.verifyCredential(sdJwt)
+
+    override fun verifySignedMetadata(signedMetadata: String, expectedIssuer: String): JSONObject =
+        issuerTrust.verifySignedMetadata(signedMetadata, expectedIssuer)
+
+    /** HAIP §6.1.1 issuer-trust validator, anchored at the bundled mock ICP-Brasil root. */
+    private val issuerTrust: IssuerTrust = IssuerTrust.default()
+
     /** The verifier's response-encryption key (`use:enc`) from `client_metadata.jwks`,
      *  with its `kid`. */
     private fun verifierEncKey(request: JSONObject): Pair<JSONObject, String> {

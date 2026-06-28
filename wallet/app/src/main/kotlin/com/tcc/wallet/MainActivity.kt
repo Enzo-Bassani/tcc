@@ -17,7 +17,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
-import com.tcc.wallet.ssi.KotlinSsiEngine
+import com.tcc.wallet.ssi.RustSsiEngine
 import com.tcc.wallet.ssi.SsiEngine
 import com.tcc.wallet.ui.Screen
 import com.tcc.wallet.ui.WalletEffect
@@ -46,7 +46,7 @@ class MainActivity : ComponentActivity() {
 
     private val holder by lazy { KeystoreHolderKey.getOrCreate(this) }
     private val store by lazy { WalletStore(File(filesDir, "wallet.json"), holder) }
-    private val engine: SsiEngine by lazy { KotlinSsiEngine() }
+    private val engine: SsiEngine by lazy { RustSsiEngine() }
     private val vm: WalletViewModel by viewModels { WalletViewModel.Factory(store, engine) }
 
     override fun onCreate(savedInstanceState: Bundle?) {

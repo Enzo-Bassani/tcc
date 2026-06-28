@@ -7,12 +7,18 @@ import uniffi.wallet_ffi.createResponse as ffiCreateResponse
 import uniffi.wallet_ffi.createVpToken as ffiCreateVpToken
 import uniffi.wallet_ffi.findMatches as ffiFindMatches
 import uniffi.wallet_ffi.readCredential as ffiReadCredential
+import uniffi.wallet_ffi.verifyIssuerCredential as ffiVerifyIssuerCredential
+import uniffi.wallet_ffi.verifyRequest as ffiVerifyRequest
+import uniffi.wallet_ffi.verifySignedMetadata as ffiVerifySignedMetadata
 
 /** camelCase boundary, for spacing out a VCT token ("UniversityDiploma" → "University Diploma"). */
 private val CAMEL_BOUNDARY = Regex("(?<=[a-z])(?=[A-Z])")
 
 /** Day-precision date label for `iat`/`exp`/`nbf` epoch claims. */
 private val DAY_DATE_FMT = java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy")
+
+/** The bundled mock ICP-Brasil root anchor (a copy of `ssi_core::trust::ICP_BRASIL_MOCK_ROOT_PEM`). */
+private const val ANCHOR_RESOURCE = "/trust/icp_brasil_root.pem"
 
 /**
  * The holder engine backed by the **shared Rust `ssi-core`** over UniFFI — the
@@ -50,7 +56,27 @@ class RustSsiEngine : SsiEngine {
 
     override fun readCredential(sdJwt: String): JSONObject = JSONObject(ffiReadCredential(sdJwt))
 
+    override fun verifyRequest(requestJwt: String, clientId: String): JSONObject =
+        JSONObject(ffiVerifyRequest(requestJwt, clientId))
+
+    override fun verifyIssuerCredential(sdJwt: String) =
+        ffiVerifyIssuerCredential(sdJwt, trustAnchors, nowUnix())
+
+    override fun verifySignedMetadata(signedMetadata: String, expectedIssuer: String): JSONObject =
+        JSONObject(ffiVerifySignedMetadata(signedMetadata, expectedIssuer, trustAnchors, nowUnix()))
+
     // --- FFI marshaling --------------------------------------------------------
+
+    /** The bundled trust anchors (mock ICP-Brasil root) the engine validates `x5c`
+     *  chains against — the same PEM resource the verifier ships, loaded once. */
+    private val trustAnchors: List<String> by lazy {
+        val pem = javaClass.getResourceAsStream(ANCHOR_RESOURCE)
+            ?.bufferedReader()?.use { it.readText() }
+            ?: error("bundled trust anchor $ANCHOR_RESOURCE missing from the classpath")
+        listOf(pem)
+    }
+
+    private fun nowUnix(): Long = System.currentTimeMillis() / 1000
 
     /** All held credentials share the single device holder key, so the engine takes
      *  one signer for the batch. */

@@ -63,6 +63,17 @@ class EngineParityTest {
             kotlin.readCredential(creds[0].sdJwt).similar(rust.readCredential(creds[0].sdJwt)),
             "both engines must reconstruct the same claim set",
         )
+
+        // (4) request authentication + issuer-credential trust agree across engines.
+        val reqJwt = bundle.getString("request_jwt")
+        val clientId = bundle.getString("client_id")
+        assertTrue(
+            kotlin.verifyRequest(reqJwt, clientId).similar(rust.verifyRequest(reqJwt, clientId)),
+            "both engines must authenticate the signed request to the same claims",
+        )
+        // Neither engine throws → both accept the minted issuer credential as trustworthy.
+        kotlin.verifyIssuerCredential(creds[0].sdJwt)
+        rust.verifyIssuerCredential(creds[0].sdJwt)
     }
 
     // --- helpers ---------------------------------------------------------------

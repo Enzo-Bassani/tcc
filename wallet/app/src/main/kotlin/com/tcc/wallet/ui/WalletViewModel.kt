@@ -100,7 +100,7 @@ class WalletViewModel(
     private fun runPreAuth(offer: JSONObject, offerText: String) {
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
-                runCatching { Oid4vciClient(http).receive(offer, store.holder, engine) }
+                runCatching { Oid4vciClient(http, engine).receive(offer, store.holder) }
             }
             result
                 .onSuccess { sdJwt -> showReceivedPreview(sdJwt, offerText) }
@@ -112,7 +112,7 @@ class WalletViewModel(
     private fun startAuthCode(offer: JSONObject) {
         viewModelScope.launch {
             val prepared = withContext(Dispatchers.IO) {
-                runCatching { Oid4vciClient(http).prepareAuthorization(offer, REDIRECT_URI) }
+                runCatching { Oid4vciClient(http, engine).prepareAuthorization(offer, REDIRECT_URI) }
             }
             prepared
                 .onSuccess { pending ->
@@ -146,7 +146,7 @@ class WalletViewModel(
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
                 runCatching {
-                    Oid4vciClient(http).completeAuthorization(pending, code, returnedIss, store.holder, engine)
+                    Oid4vciClient(http, engine).completeAuthorization(pending, code, returnedIss, store.holder)
                 }
             }
             authPending = null
