@@ -143,11 +143,25 @@ emulator:
     until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; do sleep 2; done
     echo "==> Emulator ready."
 
+# First-time bootstrap: build the Android engine (jniLibs + UniFFI bindings) ONLY if it's
+# missing, so a fresh checkout runs `just wallet` with no manual step. Changing
+# `crates/wallet-ffi` still needs an explicit `just wallet-ffi-android` — this guard is a
+# presence check, not a staleness check, to keep the iterate loop fast.
+_wallet-ffi-ensure:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f wallet/app/src/main/jniLibs/arm64-v8a/libwallet_ffi.so ] \
+       || [ ! -f wallet/ssi/src/main/kotlin/uniffi/wallet_ffi/wallet_ffi.kt ]; then
+        echo "==> Android engine not found — building it once (just wallet-ffi-android)"
+        just wallet-ffi-android
+    fi
+
 # THE wallet iterate loop: run after any wallet code change to see it on the emulator. Boots an
 # emulator first if none is connected. The debug build permits cleartext to any host, so no
-# per-host network-config edits are needed (decision W8).
+# per-host network-config edits are needed (decision W8). First run auto-builds the native
+# engine; after a `crates/wallet-ffi` change, rerun `just wallet-ffi-android` yourself.
 # Build + install + launch the wallet (debug) on the emulator
-wallet: emulator
+wallet: _wallet-ffi-ensure emulator
     #!/usr/bin/env bash
     set -euo pipefail
     echo "==> Building + installing the wallet (debug)"
@@ -159,7 +173,7 @@ wallet: emulator
 # Use when resource changes don't show up because Gradle's up-to-date cache served a stale
 # APK — does a clean uninstall + reinstall.
 # Force a clean wallet reinstall, then launch
-wallet-fresh: emulator
+wallet-fresh: _wallet-ffi-ensure emulator
     #!/usr/bin/env bash
     set -euo pipefail
     adb uninstall com.tcc.wallet >/dev/null 2>&1 || true

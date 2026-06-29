@@ -121,8 +121,8 @@ from the **prototype root** (`cd ..`):
 | `just wallet-ffi-host` | `cargo` | Build the host `libwallet_ffi` + generate the UniFFI Kotlin bindings — the prerequisite for the `:ssi` conformance test on a plain JVM. |
 | `just wallet-ffi-android` | NDK + `cargo-ndk` + rustup targets | Cross-compile `libwallet_ffi.so` for arm64 + x86_64 into `app/src/main/jniLibs/` and regenerate the bindings — the prerequisite for the APK. |
 | `just test-wallet` | JDK + `cargo` | Builds the host FFI lib, then runs the `:ssi` suite — the pure-Kotlin unit tests (offer-link parsing, OID4VCI auth-code, scan dispatch) **and** the cross-language conformance oracle over the UniFFI engine. |
-| `just wallet` | JDK + Android SDK + emulator + NDK | Build + install + launch the app on an emulator (boots one if none is connected). Build the native engine first with `just wallet-ffi-android`. The iterate-loop recipe. |
-| `just wallet-fresh` | JDK + Android SDK + emulator + NDK | Clean reinstall, then launch. |
+| `just wallet` | JDK + Android SDK + emulator + NDK | Build + install + launch the app on an emulator (boots one if none is connected). Auto-builds the native engine into `jniLibs/` on first use if it's missing (a presence check — rerun `just wallet-ffi-android` yourself after a `crates/wallet-ffi` change). The iterate-loop recipe. |
+| `just wallet-fresh` | JDK + Android SDK + emulator + NDK | Clean reinstall, then launch (same auto-build guard). |
 | `just emulator` | Android SDK | Boot an emulator (idempotent). |
 
 The conformance test shells out to `cargo` to drive the Rust `wallet-conformance` CLI
@@ -145,8 +145,7 @@ Bring up the backend and mint an offer, then drive the phone:
 cd ..
 just deploy               # Postgres + WASM verifier + issuer + relay
 just offer-qr             # a credential-offer QR for a seeded student
-just wallet-ffi-android   # build the native engine into jniLibs (once)
-just wallet               # build + launch the wallet on an emulator
+just wallet               # build + launch the wallet on an emulator (auto-builds the native engine)
 ```
 
 Scan the offer QR (Receive) to get the diploma, then `just verifier` and scan its request

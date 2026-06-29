@@ -122,8 +122,8 @@ coberta em [`../docs/INSTALL.md`](../docs/INSTALL.pt-BR.md). Todas as receitas r
 | `just wallet-ffi-host` | `cargo` | Compila a `libwallet_ffi` do host + gera os bindings UniFFI em Kotlin — o pré-requisito para o teste de conformidade do `:ssi` numa JVM comum. |
 | `just wallet-ffi-android` | NDK + `cargo-ndk` + alvos rustup | Compila `libwallet_ffi.so` para arm64 + x86_64 em `app/src/main/jniLibs/` e regenera os bindings — o pré-requisito para o APK. |
 | `just test-wallet` | JDK + `cargo` | Compila a lib FFI do host e então roda a suíte `:ssi` — os testes unitários em Kotlin puro (parsing de link de oferta, código de autorização OID4VCI, roteamento de leitura) **e** o oráculo de conformidade entre linguagens sobre o motor UniFFI. |
-| `just wallet` | JDK + Android SDK + emulador + NDK | Compila + instala + executa o app em um emulador (sobe um se nenhum estiver conectado). Compile o motor nativo antes com `just wallet-ffi-android`. A receita do laço de iteração. |
-| `just wallet-fresh` | JDK + Android SDK + emulador + NDK | Reinstalação limpa, depois executa. |
+| `just wallet` | JDK + Android SDK + emulador + NDK | Compila + instala + executa o app em um emulador (sobe um se nenhum estiver conectado). Compila o motor nativo em `jniLibs/` no primeiro uso se ele estiver ausente (uma verificação de presença — reexecute `just wallet-ffi-android` você mesmo após uma mudança em `crates/wallet-ffi`). A receita do laço de iteração. |
+| `just wallet-fresh` | JDK + Android SDK + emulador + NDK | Reinstalação limpa, depois executa (mesma proteção de auto-build). |
 | `just emulator` | Android SDK | Sobe um emulador (idempotente). |
 
 O teste de conformidade invoca o `cargo` para conduzir a CLI `wallet-conformance` em Rust **e**
@@ -146,8 +146,7 @@ Suba o backend e gere uma oferta, depois conduza o celular:
 cd ..
 just deploy               # Postgres + verificador WASM + emissor + relay
 just offer-qr             # um QR de oferta de credencial para um aluno semeado
-just wallet-ffi-android   # compila o motor nativo em jniLibs (uma vez)
-just wallet               # compila + executa a carteira em um emulador
+just wallet               # compila + executa a carteira em um emulador (auto-compila o motor nativo)
 ```
 
 Escaneie o QR da oferta (Receber) para obter o diploma, depois `just verifier` e escaneie seu QR
